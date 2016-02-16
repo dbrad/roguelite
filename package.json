@@ -1,0 +1,27 @@
+{
+  "name": "roguelite",
+  "version": "0.0.1",
+  "description": "Attempting to make a simple rouge-like / rogue-lite type game.",
+  "main" : "gulpfile.js",
+  "author": "David Brad",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dbrad/js13k2015"
+  },
+  "bugs": {
+    "url": "https://github.com/dbrad/js13k2015/issues"
+  },
+  "keywords": [
+    "roguelite"
+  ],
+  "dependencies": {
+    "gulp": "*",
+    "gulp-csso": "*",
+    "gulp-htmlmin": "*",
+    "gulp-uglify": "*",
+    "gulp-concat": "*",
+    "gulp-zip": "*"
+  },
+
+  "license": "MIT"
+}

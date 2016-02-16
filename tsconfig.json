@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "noImplicitAny": true,
+        "removeComments": true,
+        "outDir": "./build/js/",
+        "rootDir": "./src/",
+        "target": "es5",
+        "listFiles": true
+    },
+    "exclude": [
+        "node_modules"
+    ],
+    "filesGlob": [
+        "./**/*.ts",
+        "./**/*.tsx",
+        "!./node_modules/**"
+    ],
+    "files": [
+        "./src/game.ts",
+        "./src/input.ts"
+    ],
+    "atom": {
+        "rewriteTsconfig": true
+    }
+}
