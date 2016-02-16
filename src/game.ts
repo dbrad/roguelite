@@ -1,15 +1,51 @@
 /// <reference path="./input.ts"/>
 interface Context2D extends CanvasRenderingContext2D {
-    mozImageSmoothingEnabled: boolean;
-    imageSmoothingEnabled: boolean;
-    webkitImageSmoothingEnabled: boolean;
+    mozImageSmoothingEnabled?: boolean;
+    imageSmoothingEnabled?: boolean;
+    webkitImageSmoothingEnabled?: boolean;
+}
+class Entity {}
+class Item {}
+class Cell {
+  public tileID: number;
+  public entities: Entity[];
+  public items: Item[];
+  constructor(tileID: number = 0, entities: Entity[] = [], items: Item[] = []) {
+    this.tileID = tileID;
+    this.entities = entities;
+    this.items = items;
+  }
+}
+class Level {
+  public cells: Cell[][];
+  private width: number;
+  private height: number;
+  constructor(width: number, height: number) {
+    this.cells = [];
+    this.width = width;
+    this.height = height;
+
+    for (let x = 0; x < this.width; x++) {
+      for (let y = 0; y < this.height; y++) {
+        if (this.cells[x] === undefined)
+          this.cells[x] = [];
+          this.cells[x][y] = new Cell();
+      }
+    }
+  }
+  getWidth(): number {
+    return this.width;
+  }
+  getHeight(): number {
+    return this.height;
+  }
 }
 class Game {
     private _loopHandle: number;
-
-
     private ctx: Context2D;
     private screen: HTMLCanvasElement;
+
+    public level: Level;
 
     constructor(screen: HTMLCanvasElement) {
         console.log("Setting up screen");
@@ -23,7 +59,8 @@ class Game {
     init(): void {
         console.log("Initializing...");
         /** Initalize Player and World */
-
+        this.level = new Level(10, 10);
+        console.log(this.level.cells);
         this.state = "MainMenu";
     }
 
@@ -64,6 +101,10 @@ class Game {
             case "Game":
                 if (this.clearScreen) {
                     this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
+                    this.ctx.fillStyle = "#bbb";
+                    this.ctx.fillRect(0, 360, 640, this.screen.height);
+                    this.ctx.fillStyle = "#ddd";
+                    this.ctx.fillRect(640, 0, this.screen.height, this.screen.width);
                     this.clearScreen = false;
                 }
                 // draw

@@ -48,6 +48,48 @@ var Input;
     })(KB = Input.KB || (Input.KB = {}));
 })(Input || (Input = {}));
 
+var Entity = (function () {
+    function Entity() {
+    }
+    return Entity;
+}());
+var Item = (function () {
+    function Item() {
+    }
+    return Item;
+}());
+var Cell = (function () {
+    function Cell(tileID, entities, items) {
+        if (tileID === void 0) { tileID = 0; }
+        if (entities === void 0) { entities = []; }
+        if (items === void 0) { items = []; }
+        this.tileID = tileID;
+        this.entities = entities;
+        this.items = items;
+    }
+    return Cell;
+}());
+var Level = (function () {
+    function Level(width, height) {
+        this.cells = [];
+        this.width = width;
+        this.height = height;
+        for (var x = 0; x < this.width; x++) {
+            for (var y = 0; y < this.height; y++) {
+                if (this.cells[x] === undefined)
+                    this.cells[x] = [];
+                this.cells[x][y] = new Cell();
+            }
+        }
+    }
+    Level.prototype.getWidth = function () {
+        return this.width;
+    };
+    Level.prototype.getHeight = function () {
+        return this.height;
+    };
+    return Level;
+}());
 var Game = (function () {
     function Game(screen) {
         this.change = true;
@@ -64,6 +106,8 @@ var Game = (function () {
     }
     Game.prototype.init = function () {
         console.log("Initializing...");
+        this.level = new Level(10, 10);
+        console.log(this.level.cells);
         this.state = "MainMenu";
     };
     Game.prototype.update = function (delta) {
@@ -95,6 +139,10 @@ var Game = (function () {
             case "Game":
                 if (this.clearScreen) {
                     this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
+                    this.ctx.fillStyle = "#bbb";
+                    this.ctx.fillRect(0, 360, 640, this.screen.height);
+                    this.ctx.fillStyle = "#ddd";
+                    this.ctx.fillRect(640, 0, this.screen.height, this.screen.width);
                     this.clearScreen = false;
                 }
                 break;
