@@ -4,32 +4,71 @@ interface Context2D extends CanvasRenderingContext2D {
     imageSmoothingEnabled?: boolean;
     webkitImageSmoothingEnabled?: boolean;
 }
-class Entity {}
+class TileSet {}
+interface ComponentDictionary {
+  [index: string]: Component;
+}
+class Entity {
+  public components: ComponentDictionary;
+  constructor() {
+    this.components = {};
+  }
+  addComponent(component: Component) {
+    this.components[component.name] = component;
+    this[component.name] = component;
+  }
+}
+class Component {
+  public name: string;
+  constructor(name: string) {
+    this.name = name;
+  }
+}
+class IsPlayerCom extends Component {
+  public value: boolean = true;
+  constructor() {
+    super("isPlayer");
+  }
+}
 class Item {}
 class Cell {
   public tileID: number;
-  public entities: Entity[];
-  public items: Item[];
-  constructor(tileID: number = 0, entities: Entity[] = [], items: Item[] = []) {
+  public entityID: number;
+  public itemIDs: number[];
+  public visable: boolean;
+  public discovered: boolean;
+
+  constructor(tileID: number = 0, itemIDs: number[] = [], entityID: number = null ) {
     this.tileID = tileID;
-    this.entities = entities;
-    this.items = items;
+    this.entityID = entityID;
+    this.itemIDs = itemIDs;
+    this.visable = true;
+    this.discovered = true;
   }
 }
 class Level {
+  public redraw: boolean = true;
   public cells: Cell[][];
   private width: number;
   private height: number;
-  constructor(width: number, height: number) {
+
+  public camera: Camera;
+
+  private tileSet: TileSet;
+  private ItemList: Item[];
+  private EntityList: Entity[];
+
+  constructor(width: number, height: number, camera: Camera) {
     this.cells = [];
     this.width = width;
     this.height = height;
+    this.camera = camera;
 
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
         if (this.cells[x] === undefined)
           this.cells[x] = [];
-          this.cells[x][y] = new Cell();
+          this.cells[x][y] = new Cell((x + y) % 3);
       }
     }
   }
@@ -39,6 +78,84 @@ class Level {
   getHeight(): number {
     return this.height;
   }
+  update(): void {
+    if (Input.KB.wasDown(Input.KB.KEY.LEFT)) {
+      this.camera.xOffset += 1;
+      this.redraw = true;
+    } else if (Input.KB.wasDown(Input.KB.KEY.RIGHT)) {
+      this.camera.xOffset -= 1;
+      this.redraw = true;
+    }
+
+    if (Input.KB.wasDown(Input.KB.KEY.UP)) {
+      this.camera.yOffset += 1;
+      this.redraw = true;
+    } else if (Input.KB.wasDown(Input.KB.KEY.DOWN)) {
+      this.camera.yOffset -= 1;
+      this.redraw = true;
+    }
+  }
+  draw(ctx: Context2D): void {
+    for (let tx = this.camera.xOffset, x = 0; tx < this.camera.xOffset + this.camera.width; tx++) {
+      for (let ty =  this.camera.yOffset, y = 0; ty < this.camera.yOffset + this.camera.height; ty++) {
+        if (!this.cells[tx]) {
+          ctx.fillStyle = "#000";
+          ctx.fillRect(x * 8, y * 8, 8, 8);
+          y++;
+          continue;
+        }
+        if (!this.cells[tx][ty]) {
+          ctx.fillStyle = "#000";
+          ctx.fillRect(x * 8, y * 8, 8, 8);
+          y++;
+          continue;
+        }
+
+        let tCell = this.cells[tx][ty];
+        if (!tCell.discovered) {
+          ctx.fillStyle = "black";
+          ctx.fillRect(x * 8, y * 8, 8, 8);
+        } else if (!tCell.visable) {
+          ctx.fillStyle = "#bbb";
+          ctx.fillRect(x * 8, y * 8, 8, 8);
+        } else {
+          switch (tCell.tileID) {
+            case 0:
+              ctx.fillStyle = "#F00";
+              break;
+            case 1:
+              ctx.fillStyle = "#FF0";
+              break;
+            case 2:
+              ctx.fillStyle = "#0FF";
+              break;
+            default:
+              ctx.fillStyle = "#FFF";
+            break;
+          }
+          ctx.fillRect(x * 8, y * 8, 8, 8);
+        }
+        y++;
+      }
+      x++;
+    }
+  }
+}
+class Camera {
+  public width: number;
+  public height: number;
+  public xOffset: number;
+  public yOffset: number;
+  constructor(width: number, height: number, xOffset: number = 0, yOffset: number = 0) {
+    this.width = width;
+    this.height = height;
+    this.xOffset = xOffset;
+    this.yOffset = yOffset;
+  }
+}
+namespace GAMEINFO {
+  export const GAMESCREEN_TILE_WIDTH = 80;
+  export const GAMESCREEN_TILE_HEIGHT = 45;
 }
 class Game {
     private _loopHandle: number;
@@ -49,6 +166,7 @@ class Game {
 
     constructor(screen: HTMLCanvasElement) {
         console.log("Setting up screen");
+
         /** Hook our game up to our canvas "Screen" */
         this.screen = screen;
         this.ctx = <Context2D>screen.getContext("2d");
@@ -59,7 +177,7 @@ class Game {
     init(): void {
         console.log("Initializing...");
         /** Initalize Player and World */
-        this.level = new Level(10, 10);
+        this.level = new Level(20, 20, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
         console.log(this.level.cells);
         this.state = "MainMenu";
     }
@@ -79,6 +197,7 @@ class Game {
                     if (delta < 0) delta = 0;
                     this.deltaPaused = 0;
                 }
+                this.level.update();
                 break;
             case "GamePause":
                 break;
@@ -106,6 +225,11 @@ class Game {
                     this.ctx.fillStyle = "#ddd";
                     this.ctx.fillRect(640, 0, this.screen.height, this.screen.width);
                     this.clearScreen = false;
+                }
+                if (this.level.redraw) {
+                  this.ctx.clearRect(0, 0, GAMEINFO.GAMESCREEN_TILE_WIDTH * 8, GAMEINFO.GAMESCREEN_TILE_HEIGHT * 8);
+                  this.level.draw(this.ctx);
+                  this.level.redraw = false;
                 }
                 // draw
                 break;
@@ -166,6 +290,7 @@ class Game {
             this.change = this.clearScreen = true;
             this.deltaPaused = performance.now() - this.timePaused;
             this.timePaused = 0;
+            this.level.redraw = true;
         }
     }
 }
