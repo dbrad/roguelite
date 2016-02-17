@@ -61,10 +61,142 @@ var Level = (function () {
             for (var y = 0; y < this.height; y++) {
                 if (this.cells[x] === undefined)
                     this.cells[x] = [];
-                this.cells[x][y] = new Cell((x + y) % 3);
+                if ((Math.random() * 100) < 50 || (x === 0 || x === (this.width - 1) || y === 0 || y === (this.height - 1))) {
+                    this.cells[x][y] = new Cell(0);
+                }
+                else {
+                    this.cells[x][y] = new Cell(1);
+                }
+            }
+        }
+        for (var x = 5; x < this.width - 5; x++) {
+            this.cells[x][(this.height / 2) - 1].tileID = 1;
+            this.cells[x][(this.height / 2)].tileID = 1;
+            this.cells[x][(this.height / 2) + 1].tileID = 1;
+        }
+        for (var y = 5; y < this.width - 5; y++) {
+            this.cells[(this.height / 2) - 1][y].tileID = 1;
+            this.cells[(this.height / 2)][y].tileID = 1;
+            this.cells[(this.height / 2) + 1][y].tileID = 1;
+        }
+        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+        for (var x = 1; x < this.width - 1; x++) {
+            for (var y = 1; y < this.height - 1; y++) {
+                var tCell = this.cells[x][y];
+                var liveN = this.getLiveNeighbors(x, y);
+                if (tCell.tileID === 0 && liveN < 2) {
+                    tCell.tileID = 1;
+                }
+                else if (tCell.tileID === 1 && liveN === 8) {
+                    tCell.tileID = 0;
+                }
+            }
+        }
+        var mx = (this.width / 2);
+        var my = (this.height / 2);
+        while (this.cells[mx][my].tileID !== 1) {
+            mx++;
+        }
+        this.floodFill(mx, my, 1, 2);
+        for (var x = 1; x < this.width - 1; x++) {
+            for (var y = 1; y < this.height - 1; y++) {
+                if (this.cells[x][y].tileID === 1) {
+                    this.cells[x][y].tileID = 0;
+                }
             }
         }
     }
+    Level.prototype.floodFill = function (x, y, target, fill) {
+        var maxX = this.width - 1;
+        var maxY = this.height - 1;
+        var stack = [];
+        var index = 0;
+        stack[0] = [];
+        stack[0][0] = x;
+        stack[0][1] = y;
+        this.cells[x][y].tileID = fill;
+        while (index >= 0) {
+            x = stack[index][0];
+            y = stack[index][1];
+            index--;
+            if ((x > 0) && (this.cells[x - 1][y].tileID === target)) {
+                this.cells[x - 1][y].tileID = fill;
+                index++;
+                if (!stack[index])
+                    stack[index] = [];
+                stack[index][0] = x - 1;
+                stack[index][1] = y;
+            }
+            if ((x < maxX) && (this.cells[x + 1][y].tileID === target)) {
+                this.cells[x + 1][y].tileID = fill;
+                index++;
+                if (!stack[index])
+                    stack[index] = [];
+                stack[index][0] = x + 1;
+                stack[index][1] = y;
+            }
+            if ((y > 0) && (this.cells[x][y - 1].tileID === target)) {
+                this.cells[x][y - 1].tileID = fill;
+                index++;
+                if (!stack[index])
+                    stack[index] = [];
+                stack[index][0] = x;
+                stack[index][1] = y - 1;
+            }
+            if ((y < maxY) && (this.cells[x][y + 1].tileID === target)) {
+                this.cells[x][y + 1].tileID = fill;
+                index++;
+                if (!stack[index])
+                    stack[index] = [];
+                stack[index][0] = x;
+                stack[index][1] = y + 1;
+            }
+        }
+    };
+    Level.prototype.getLiveNeighbors = function (x, y) {
+        var count = 0;
+        for (var nx = x - 1; nx <= x + 1; nx++) {
+            if (nx < 0 || nx > this.width)
+                continue;
+            for (var ny = y - 1; ny <= y + 1; ny++) {
+                if (ny < 0 || ny > this.height)
+                    continue;
+                if (!(nx === x && ny === y)) {
+                    count += this.cells[nx][ny].tileID;
+                }
+            }
+        }
+        return 8 - count;
+    };
+    Level.prototype.cellularAutomata = function (B, S) {
+        for (var x = 1; x < this.width - 1; x++) {
+            for (var y = 1; y < this.height - 1; y++) {
+                var tCell = this.cells[x][y];
+                var liveN = this.getLiveNeighbors(x, y);
+                if (tCell.tileID === 1) {
+                    for (var n in B) {
+                        if (liveN === B[n]) {
+                            tCell.tileID = 0;
+                            break;
+                        }
+                    }
+                }
+                else {
+                    tCell.tileID = 1;
+                    for (var n in S) {
+                        if (liveN === S[n]) {
+                            tCell.tileID = 0;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    };
     Level.prototype.getWidth = function () {
         return this.width;
     };
@@ -72,19 +204,19 @@ var Level = (function () {
         return this.height;
     };
     Level.prototype.update = function () {
-        if (Input.KB.wasDown(Input.KB.KEY.LEFT)) {
+        if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
             this.camera.xOffset += 1;
             this.redraw = true;
         }
-        else if (Input.KB.wasDown(Input.KB.KEY.RIGHT)) {
+        else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
             this.camera.xOffset -= 1;
             this.redraw = true;
         }
-        if (Input.KB.wasDown(Input.KB.KEY.UP)) {
+        if (Input.KB.isDown(Input.KB.KEY.UP)) {
             this.camera.yOffset += 1;
             this.redraw = true;
         }
-        else if (Input.KB.wasDown(Input.KB.KEY.DOWN)) {
+        else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
             this.camera.yOffset -= 1;
             this.redraw = true;
         }
@@ -116,10 +248,10 @@ var Level = (function () {
                 else {
                     switch (tCell.tileID) {
                         case 0:
-                            ctx.fillStyle = "#F00";
+                            ctx.fillStyle = "#000";
                             break;
                         case 1:
-                            ctx.fillStyle = "#FF0";
+                            ctx.fillStyle = "#AAA";
                             break;
                         case 2:
                             ctx.fillStyle = "#0FF";
@@ -169,7 +301,7 @@ var Game = (function () {
     }
     Game.prototype.init = function () {
         console.log("Initializing...");
-        this.level = new Level(20, 20, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
+        this.level = new Level(100, 100, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
         console.log(this.level.cells);
         this.state = "MainMenu";
     };

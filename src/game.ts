@@ -64,37 +64,190 @@ class Level {
     this.height = height;
     this.camera = camera;
 
+    // Intial Randomization
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
         if (this.cells[x] === undefined)
           this.cells[x] = [];
-          this.cells[x][y] = new Cell((x + y) % 3);
+          if ((Math.random() * 100) < 50 || (x === 0 || x === (this.width - 1) || y === 0 || y === (this.height - 1))) {
+            this.cells[x][y] = new Cell(0); // Alive (Wall)
+          } else {
+            this.cells[x][y] = new Cell(1); // Dead (Floor)
+          }
+      }
+    }
+    // Striping
+    for (let x = 5; x < this.width - 5; x++) {
+        this.cells[x][(this.height / 2) - 1].tileID = 1;
+        this.cells[x][(this.height / 2)].tileID = 1;
+        this.cells[x][(this.height / 2) + 1].tileID = 1;
+    }
+    for (let y = 5; y < this.width - 5; y++) {
+        this.cells[(this.height / 2) - 1][y].tileID = 1;
+        this.cells[(this.height / 2)][y].tileID = 1;
+        this.cells[(this.height / 2) + 1][y].tileID = 1;
+    }
+
+    // Cellular Automata runs
+    this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+    this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+    this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+    this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+    this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+
+    // lone pixel killing / smoothing
+    for (let x = 1; x < this.width - 1; x++) {
+      for (let y = 1; y < this.height - 1; y++) {
+        let tCell = this.cells[x][y];
+        let liveN = this.getLiveNeighbors(x, y);
+        if (tCell.tileID === 0 && liveN < 2) { // if wall
+          tCell.tileID = 1;
+        } else if (tCell.tileID === 1 && liveN === 8) { // if wall
+          tCell.tileID = 0;
+        }
+      }
+    }
+
+    let mx = (this.width / 2);
+    let my = (this.height / 2);
+    while (this.cells[mx][my].tileID !== 1) { mx++; }
+    this.floodFill(mx, my, 1, 2);
+    for (let x = 1; x < this.width - 1; x++) {
+      for (let y = 1; y < this.height - 1; y++) {
+        if (this.cells[x][y].tileID === 1) {
+          this.cells[x][y].tileID = 0;
+        }
       }
     }
   }
+
+  private floodFill(x: number, y: number, target: number, fill: number) {
+    let maxX: number = this.width - 1;
+    let maxY: number = this.height - 1;
+    let stack: number[][] = [];
+    let index: number = 0;
+
+    stack[0] = [];
+
+    stack[0][0] = x;
+    stack[0][1] = y;
+    this.cells[x][y].tileID = fill;
+
+    while (index >= 0) {
+      x = stack[index][0];
+      y = stack[index][1];
+
+      index--;
+
+      if ((x > 0) && (this.cells[x - 1][y].tileID === target)) {
+        this.cells[x - 1][y].tileID = fill;
+        index++;
+        if (!stack[index])
+          stack[index] = [];
+
+        stack[index][0] = x - 1;
+        stack[index][1] = y;
+      }
+
+      if ((x < maxX) && (this.cells[x + 1][y].tileID === target)) {
+        this.cells[x + 1][y].tileID = fill;
+        index++;
+        if (!stack[index])
+          stack[index] = [];
+
+        stack[index][0] = x + 1;
+        stack[index][1] = y;
+      }
+
+      if ((y > 0) && (this.cells[x][y - 1].tileID === target)) {
+        this.cells[x][y - 1].tileID = fill;
+        index++;
+        if (!stack[index])
+          stack[index] = [];
+
+        stack[index][0] = x;
+        stack[index][1] = y - 1;
+      }
+
+      if ((y < maxY) && (this.cells[x][y + 1].tileID === target)) {
+        this.cells[x][y + 1].tileID = fill;
+        index++;
+        if (!stack[index])
+          stack[index] = [];
+
+        stack[index][0] = x;
+        stack[index][1] = y + 1;
+      }
+    }
+  }
+
+  private getLiveNeighbors(x: number, y: number) {
+      let count: number = 0;
+      for (let nx = x - 1; nx <= x + 1; nx++) {
+        if (nx < 0 || nx > this.width)
+          continue;
+        for (let ny = y - 1; ny <= y + 1; ny++) {
+          if (ny < 0 || ny > this.height)
+            continue;
+            if (!(nx === x && ny === y)) {
+              count += this.cells[nx][ny].tileID; // + 0 if alive, + 1 is dead
+            }
+        }
+      }
+    return 8 - count; // 8 - deads (1s) = number of alive
+  }
+
+  private cellularAutomata(B: number[], S: number[]) {
+    for (let x = 1; x < this.width - 1; x++) {
+      for (let y = 1; y < this.height - 1; y++) {
+        let tCell = this.cells[x][y];
+        let liveN = this.getLiveNeighbors(x, y);
+        if (tCell.tileID === 1) { // if Dead
+          for ( let n in B ) {
+            if (liveN === B[n]) {
+              tCell.tileID = 0; // Alive (Wall)
+              break;
+            }
+          }
+        } else { // if alive
+          tCell.tileID = 1; // Dead (Floor)
+          for ( let n in S ) {
+            if (liveN === S[n]) { // if it meet survival conditions, bring it back
+              tCell.tileID = 0; // Alive (Wall)
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
   getWidth(): number {
     return this.width;
   }
+
   getHeight(): number {
     return this.height;
   }
+
   update(): void {
-    if (Input.KB.wasDown(Input.KB.KEY.LEFT)) {
+    if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
       this.camera.xOffset += 1;
       this.redraw = true;
-    } else if (Input.KB.wasDown(Input.KB.KEY.RIGHT)) {
+    } else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
       this.camera.xOffset -= 1;
       this.redraw = true;
     }
 
-    if (Input.KB.wasDown(Input.KB.KEY.UP)) {
+    if (Input.KB.isDown(Input.KB.KEY.UP)) {
       this.camera.yOffset += 1;
       this.redraw = true;
-    } else if (Input.KB.wasDown(Input.KB.KEY.DOWN)) {
+    } else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
       this.camera.yOffset -= 1;
       this.redraw = true;
     }
   }
+
   draw(ctx: Context2D): void {
     for (let tx = this.camera.xOffset, x = 0; tx < this.camera.xOffset + this.camera.width; tx++) {
       for (let ty =  this.camera.yOffset, y = 0; ty < this.camera.yOffset + this.camera.height; ty++) {
@@ -120,11 +273,11 @@ class Level {
           ctx.fillRect(x * 8, y * 8, 8, 8);
         } else {
           switch (tCell.tileID) {
-            case 0:
-              ctx.fillStyle = "#F00";
+            case 0: // Wall
+              ctx.fillStyle = "#000";
               break;
             case 1:
-              ctx.fillStyle = "#FF0";
+              ctx.fillStyle = "#AAA";
               break;
             case 2:
               ctx.fillStyle = "#0FF";
@@ -177,7 +330,7 @@ class Game {
     init(): void {
         console.log("Initializing...");
         /** Initalize Player and World */
-        this.level = new Level(20, 20, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
+        this.level = new Level(100, 100, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
         console.log(this.level.cells);
         this.state = "MainMenu";
     }
