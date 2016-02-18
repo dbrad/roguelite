@@ -1,58 +1,13 @@
-var Input;
-(function (Input) {
-    var KB;
-    (function (KB) {
-        (function (KEY) {
-            KEY[KEY["A"] = 65] = "A";
-            KEY[KEY["D"] = 68] = "D";
-            KEY[KEY["W"] = 87] = "W";
-            KEY[KEY["S"] = 83] = "S";
-            KEY[KEY["LEFT"] = 37] = "LEFT";
-            KEY[KEY["RIGHT"] = 39] = "RIGHT";
-            KEY[KEY["UP"] = 38] = "UP";
-            KEY[KEY["DOWN"] = 40] = "DOWN";
-            KEY[KEY["ENTER"] = 13] = "ENTER";
-            KEY[KEY["SPACE"] = 32] = "SPACE";
-        })(KB.KEY || (KB.KEY = {}));
-        var KEY = KB.KEY;
-        var _isDown = [];
-        var _isUp = [];
-        var _wasDown = [];
-        for (var i = 0; i < 256; i++) {
-            _isUp[i] = true;
-        }
-        function isDown(keyCode) {
-            return (_isDown[keyCode]);
-        }
-        KB.isDown = isDown;
-        function wasDown(keyCode) {
-            var result = _wasDown[keyCode];
-            _wasDown[keyCode] = false;
-            return (result);
-        }
-        KB.wasDown = wasDown;
-        function keyDown(event) {
-            var keyCode = event.which;
-            _isDown[keyCode] = true;
-            if (_isUp[keyCode])
-                _wasDown[keyCode] = true;
-            _isUp[keyCode] = false;
-        }
-        KB.keyDown = keyDown;
-        function keyUp(event) {
-            var keyCode = event.which;
-            _isDown[keyCode] = false;
-            _isUp[keyCode] = true;
-        }
-        KB.keyUp = keyUp;
-    })(KB = Input.KB || (Input.KB = {}));
-})(Input || (Input = {}));
-
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+var GAMEINFO;
+(function (GAMEINFO) {
+    GAMEINFO.GAMESCREEN_TILE_WIDTH = 80;
+    GAMEINFO.GAMESCREEN_TILE_HEIGHT = 45;
+})(GAMEINFO || (GAMEINFO = {}));
 var TileSet = (function () {
     function TileSet() {
     }
@@ -100,6 +55,17 @@ var Cell = (function () {
     }
     return Cell;
 }());
+var Camera = (function () {
+    function Camera(width, height, xOffset, yOffset) {
+        if (xOffset === void 0) { xOffset = 0; }
+        if (yOffset === void 0) { yOffset = 0; }
+        this.width = width;
+        this.height = height;
+        this.xOffset = xOffset;
+        this.yOffset = yOffset;
+    }
+    return Camera;
+}());
 var Level = (function () {
     function Level(width, height, camera) {
         this.redraw = true;
@@ -107,58 +73,6 @@ var Level = (function () {
         this.width = width;
         this.height = height;
         this.camera = camera;
-        for (var x = 0; x < this.width; x++) {
-            for (var y = 0; y < this.height; y++) {
-                if (this.cells[x] === undefined)
-                    this.cells[x] = [];
-                if ((Math.random() * 100) < 50 || (x === 0 || x === (this.width - 1) || y === 0 || y === (this.height - 1))) {
-                    this.cells[x][y] = new Cell(0);
-                }
-                else {
-                    this.cells[x][y] = new Cell(1);
-                }
-            }
-        }
-        for (var x = 5; x < this.width - 5; x++) {
-            this.cells[x][(this.height / 2) - 1].tileID = 1;
-            this.cells[x][(this.height / 2)].tileID = 1;
-            this.cells[x][(this.height / 2) + 1].tileID = 1;
-        }
-        for (var y = 5; y < this.width - 5; y++) {
-            this.cells[(this.height / 2) - 1][y].tileID = 1;
-            this.cells[(this.height / 2)][y].tileID = 1;
-            this.cells[(this.height / 2) + 1][y].tileID = 1;
-        }
-        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
-        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
-        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
-        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
-        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
-        for (var x = 1; x < this.width - 1; x++) {
-            for (var y = 1; y < this.height - 1; y++) {
-                var tCell = this.cells[x][y];
-                var liveN = this.getLiveNeighbors(x, y);
-                if (tCell.tileID === 0 && liveN < 2) {
-                    tCell.tileID = 1;
-                }
-                else if (tCell.tileID === 1 && liveN === 8) {
-                    tCell.tileID = 0;
-                }
-            }
-        }
-        var mx = (this.width / 2);
-        var my = (this.height / 2);
-        while (this.cells[mx][my].tileID !== 1) {
-            mx++;
-        }
-        this.floodFill(mx, my, 1, 2);
-        for (var x = 1; x < this.width - 1; x++) {
-            for (var y = 1; y < this.height - 1; y++) {
-                if (this.cells[x][y].tileID === 1) {
-                    this.cells[x][y].tileID = 0;
-                }
-            }
-        }
     }
     Level.prototype.floodFill = function (x, y, target, fill) {
         var maxX = this.width - 1;
@@ -204,46 +118,6 @@ var Level = (function () {
                     stack[index] = [];
                 stack[index][0] = x;
                 stack[index][1] = y + 1;
-            }
-        }
-    };
-    Level.prototype.getLiveNeighbors = function (x, y) {
-        var count = 0;
-        for (var nx = x - 1; nx <= x + 1; nx++) {
-            if (nx < 0 || nx > this.width)
-                continue;
-            for (var ny = y - 1; ny <= y + 1; ny++) {
-                if (ny < 0 || ny > this.height)
-                    continue;
-                if (!(nx === x && ny === y)) {
-                    count += this.cells[nx][ny].tileID;
-                }
-            }
-        }
-        return 8 - count;
-    };
-    Level.prototype.cellularAutomata = function (B, S) {
-        for (var x = 1; x < this.width - 1; x++) {
-            for (var y = 1; y < this.height - 1; y++) {
-                var tCell = this.cells[x][y];
-                var liveN = this.getLiveNeighbors(x, y);
-                if (tCell.tileID === 1) {
-                    for (var n in B) {
-                        if (liveN === B[n]) {
-                            tCell.tileID = 0;
-                            break;
-                        }
-                    }
-                }
-                else {
-                    tCell.tileID = 1;
-                    for (var n in S) {
-                        if (liveN === S[n]) {
-                            tCell.tileID = 0;
-                            break;
-                        }
-                    }
-                }
             }
         }
     };
@@ -319,22 +193,334 @@ var Level = (function () {
     };
     return Level;
 }());
-var Camera = (function () {
-    function Camera(width, height, xOffset, yOffset) {
-        if (xOffset === void 0) { xOffset = 0; }
-        if (yOffset === void 0) { yOffset = 0; }
-        this.width = width;
-        this.height = height;
-        this.xOffset = xOffset;
-        this.yOffset = yOffset;
+
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var Cave = (function (_super) {
+    __extends(Cave, _super);
+    function Cave(width, height, camera) {
+        _super.call(this, width, height, camera);
+        for (var x = 0; x < this.width; x++) {
+            for (var y = 0; y < this.height; y++) {
+                if (this.cells[x] === undefined)
+                    this.cells[x] = [];
+                if ((Math.random() * 100) < 50 || (x === 0 || x === (this.width - 1) || y === 0 || y === (this.height - 1))) {
+                    this.cells[x][y] = new Cell(0);
+                }
+                else {
+                    this.cells[x][y] = new Cell(1);
+                }
+            }
+        }
+        for (var x = 5; x < this.width - 5; x++) {
+            this.cells[x][(this.height / 2) - 1].tileID = 1;
+            this.cells[x][(this.height / 2)].tileID = 1;
+            this.cells[x][(this.height / 2) + 1].tileID = 1;
+        }
+        for (var y = 5; y < this.width - 5; y++) {
+            this.cells[(this.height / 2) - 1][y].tileID = 1;
+            this.cells[(this.height / 2)][y].tileID = 1;
+            this.cells[(this.height / 2) + 1][y].tileID = 1;
+        }
+        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+        this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
+        for (var x = 1; x < this.width - 1; x++) {
+            for (var y = 1; y < this.height - 1; y++) {
+                var tCell = this.cells[x][y];
+                var liveN = this.getLiveNeighbors(x, y);
+                if (tCell.tileID === 0 && liveN < 2) {
+                    tCell.tileID = 1;
+                }
+                else if (tCell.tileID === 1 && liveN === 8) {
+                    tCell.tileID = 0;
+                }
+            }
+        }
+        var mx = (this.width / 2);
+        var my = (this.height / 2);
+        while (this.cells[mx][my].tileID !== 1) {
+            mx++;
+        }
+        this.floodFill(mx, my, 1, 2);
+        for (var x = 1; x < this.width - 1; x++) {
+            for (var y = 1; y < this.height - 1; y++) {
+                if (this.cells[x][y].tileID === 1) {
+                    this.cells[x][y].tileID = 0;
+                }
+            }
+        }
     }
-    return Camera;
+    Cave.prototype.getLiveNeighbors = function (x, y) {
+        var count = 0;
+        for (var nx = x - 1; nx <= x + 1; nx++) {
+            if (nx < 0 || nx > this.width)
+                continue;
+            for (var ny = y - 1; ny <= y + 1; ny++) {
+                if (ny < 0 || ny > this.height)
+                    continue;
+                if (!(nx === x && ny === y)) {
+                    count += this.cells[nx][ny].tileID;
+                }
+            }
+        }
+        return 8 - count;
+    };
+    Cave.prototype.cellularAutomata = function (B, S) {
+        for (var x = 1; x < this.width - 1; x++) {
+            for (var y = 1; y < this.height - 1; y++) {
+                var tCell = this.cells[x][y];
+                var liveN = this.getLiveNeighbors(x, y);
+                if (tCell.tileID === 1) {
+                    for (var n in B) {
+                        if (liveN === B[n]) {
+                            tCell.tileID = 0;
+                            break;
+                        }
+                    }
+                }
+                else {
+                    tCell.tileID = 1;
+                    for (var n in S) {
+                        if (liveN === S[n]) {
+                            tCell.tileID = 0;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    };
+    return Cave;
+}(Level));
+
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+var WALL;
+(function (WALL) {
+    WALL[WALL["N"] = 0] = "N";
+    WALL[WALL["E"] = 1] = "E";
+    WALL[WALL["S"] = 2] = "S";
+    WALL[WALL["W"] = 3] = "W";
+})(WALL || (WALL = {}));
+;
+var Room = (function () {
+    function Room() {
+        this.x = 0;
+        this.y = 0;
+        this.w = 0;
+        this.h = 0;
+        this.walls = [WALL.N, WALL.E, WALL.S, WALL.W];
+    }
+    Room.prototype.getRandomWall = function () {
+        var randWall;
+        var val = randomInt(0, 400);
+        if (val < 150) {
+            randWall = WALL.W;
+        }
+        else if (val < 300) {
+            randWall = WALL.E;
+        }
+        else if (val < 350) {
+            randWall = WALL.N;
+        }
+        else if (val < 400) {
+            randWall = WALL.S;
+        }
+        var x = 0;
+        var y = 0;
+        if (randWall === WALL.N) {
+            x = randomInt(this.x, this.x + this.w - 3);
+            y = this.y - 1;
+        }
+        else if (randWall === WALL.S) {
+            x = randomInt(this.x, this.x + this.w - 3);
+            y = this.y + this.h;
+        }
+        else if (randWall === WALL.W) {
+            x = this.x - 1;
+            y = randomInt(this.y, this.y + this.h - 3);
+        }
+        else if (randWall === WALL.E) {
+            x = this.x + this.w;
+            y = randomInt(this.y, this.y + this.h - 3);
+        }
+        return { x: x, y: y, w: randWall };
+    };
+    return Room;
 }());
-var GAMEINFO;
-(function (GAMEINFO) {
-    GAMEINFO.GAMESCREEN_TILE_WIDTH = 80;
-    GAMEINFO.GAMESCREEN_TILE_HEIGHT = 45;
-})(GAMEINFO || (GAMEINFO = {}));
+var Dungeon = (function (_super) {
+    __extends(Dungeon, _super);
+    function Dungeon(width, height, camera) {
+        _super.call(this, width, height, camera);
+        for (var x = 0; x < this.width; x++) {
+            for (var y = 0; y < this.height; y++) {
+                if (this.cells[x] === undefined)
+                    this.cells[x] = [];
+                this.cells[x][y] = new Cell(0);
+            }
+        }
+        this.generate(25);
+    }
+    Dungeon.prototype.scan = function (room) {
+        var result = true;
+        for (var x0 = room.x; !(x0 >= (room.x + room.w)) && result; x0++) {
+            for (var y0 = room.y; !(y0 >= (room.y + room.h)) && result; y0++) {
+                result = result && (this.cells[x0] !== undefined) && (this.cells[x0][y0] !== undefined);
+                result = result && (this.cells[x0][y0].tileID === 0);
+            }
+        }
+        return result;
+    };
+    Dungeon.prototype.addRoom = function (room) {
+        for (var x0 = room.x; (x0 < room.x + room.w); x0++) {
+            for (var y0 = room.y; (y0 < room.y + room.h); y0++) {
+                this.cells[x0][y0].tileID = 2;
+            }
+        }
+    };
+    Dungeon.prototype.makeRoom = function (p) {
+        if (p === void 0) { p = { x: -1, y: -1, w: WALL.N }; }
+        var room = new Room();
+        do {
+            room.w = randomInt(5, this.width / 5);
+            room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
+            room.h = randomInt(5, this.height / 5);
+            room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
+        } while (room.w * room.h > (this.width * this.height) / 4);
+        room.x = p.x;
+        room.y = p.y;
+        return room;
+    };
+    Dungeon.prototype.makeCorridor = function (p) {
+        if (p === void 0) { p = { x: -1, y: -1, w: WALL.N }; }
+        var room = new Room();
+        room.w = (p.w === WALL.N || p.w === WALL.S) ? 3 : randomInt(7, this.width / 4);
+        room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
+        room.h = (p.w === WALL.W || p.w === WALL.E) ? 3 : randomInt(7, this.height / 4);
+        room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
+        room.x = p.x;
+        room.y = p.y;
+        return room;
+    };
+    Dungeon.prototype.generate = function (rooms) {
+        var roomArray = [];
+        var gRooms = 0;
+        var weight = 0;
+        var failures = 0;
+        var feature = randomInt(0, 100);
+        var room = this.makeRoom();
+        room.x = randomInt(1, this.width - room.w);
+        room.y = randomInt(1, this.height - room.h);
+        roomArray[roomArray.length] = room;
+        this.addRoom(room);
+        gRooms++;
+        var p;
+        while (roomArray.length > 0 && gRooms < rooms) {
+            if (feature > (45 + weight)) {
+                p = roomArray[roomArray.length - 1].getRandomWall();
+                room = this.makeCorridor(p);
+                while (failures < 100 && !this.scan(room)) {
+                    failures++;
+                    p = roomArray[roomArray.length - 1].getRandomWall();
+                    room = this.makeCorridor(p);
+                }
+                if (failures >= 100) {
+                    roomArray.pop();
+                    failures = 0;
+                    continue;
+                }
+                roomArray[roomArray.length] = room;
+                this.addRoom(room);
+                weight += 5;
+                failures = 0;
+            }
+            else {
+                p = roomArray[roomArray.length - 1].getRandomWall();
+                room = this.makeRoom(p);
+                while (failures < 100 && !this.scan(room)) {
+                    failures++;
+                    p = roomArray[roomArray.length - 1].getRandomWall();
+                    room = this.makeRoom(p);
+                }
+                if (failures >= 100) {
+                    roomArray.pop();
+                    failures = 0;
+                    continue;
+                }
+                roomArray[roomArray.length] = room;
+                this.addRoom(room);
+                gRooms++;
+                weight -= 10;
+                failures = 0;
+            }
+            feature = randomInt(0, 100);
+        }
+    };
+    return Dungeon;
+}(Level));
+
+var Input;
+(function (Input) {
+    var KB;
+    (function (KB) {
+        (function (KEY) {
+            KEY[KEY["A"] = 65] = "A";
+            KEY[KEY["D"] = 68] = "D";
+            KEY[KEY["W"] = 87] = "W";
+            KEY[KEY["S"] = 83] = "S";
+            KEY[KEY["LEFT"] = 37] = "LEFT";
+            KEY[KEY["RIGHT"] = 39] = "RIGHT";
+            KEY[KEY["UP"] = 38] = "UP";
+            KEY[KEY["DOWN"] = 40] = "DOWN";
+            KEY[KEY["ENTER"] = 13] = "ENTER";
+            KEY[KEY["SPACE"] = 32] = "SPACE";
+        })(KB.KEY || (KB.KEY = {}));
+        var KEY = KB.KEY;
+        var _isDown = [];
+        var _isUp = [];
+        var _wasDown = [];
+        for (var i = 0; i < 256; i++) {
+            _isUp[i] = true;
+        }
+        function isDown(keyCode) {
+            return (_isDown[keyCode]);
+        }
+        KB.isDown = isDown;
+        function wasDown(keyCode) {
+            var result = _wasDown[keyCode];
+            _wasDown[keyCode] = false;
+            return (result);
+        }
+        KB.wasDown = wasDown;
+        function keyDown(event) {
+            var keyCode = event.which;
+            _isDown[keyCode] = true;
+            if (_isUp[keyCode])
+                _wasDown[keyCode] = true;
+            _isUp[keyCode] = false;
+        }
+        KB.keyDown = keyDown;
+        function keyUp(event) {
+            var keyCode = event.which;
+            _isDown[keyCode] = false;
+            _isUp[keyCode] = true;
+        }
+        KB.keyUp = keyUp;
+    })(KB = Input.KB || (Input.KB = {}));
+})(Input || (Input = {}));
+
 var Game = (function () {
     function Game(screen) {
         this.change = true;
@@ -351,8 +537,7 @@ var Game = (function () {
     }
     Game.prototype.init = function () {
         console.log("Initializing...");
-        this.level = new Level(100, 100, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
-        console.log(this.level.cells);
+        this.level = new Dungeon(200, 200, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
         this.state = "MainMenu";
     };
     Game.prototype.update = function (delta) {

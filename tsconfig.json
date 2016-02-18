@@ -16,6 +16,9 @@
         "!./node_modules/**"
     ],
     "files": [
+        "./src/cave.ts",
+        "./src/dungeon.ts",
+        "./src/game_objs.ts",
         "./src/game.ts",
         "./src/input.ts"
     ],

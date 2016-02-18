@@ -6,7 +6,7 @@ var csso = require('gulp-csso');
 var concat = require('gulp-concat');
 
 gulp.task('concat', function() {
-  return gulp.src(['build/js/input.js','build/js/game.js'])
+  return gulp.src(['build/js/game_objs.js','build/js/cave.js', 'build/js/dungeon.js','build/js/input.js','build/js/game.js'])
     .pipe(concat('main.js'))
     .pipe(gulp.dest('build'));
 });
