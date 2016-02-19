@@ -68,7 +68,7 @@ var Dungeon = (function (_super) {
                 this.cells[x][y] = new Cell(0);
             }
         }
-        this.generate(25);
+        this.generate(32);
     }
     Dungeon.prototype.scan = function (room, wall, adjustForDoor) {
         var result = true;
@@ -231,7 +231,6 @@ var Dungeon = (function (_super) {
             }
             feature = randomInt(0, 100);
         }
-        console.log(gRooms);
     };
     return Dungeon;
 }(Level));

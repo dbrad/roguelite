@@ -5,8 +5,17 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var GAMEINFO;
 (function (GAMEINFO) {
-    GAMEINFO.GAMESCREEN_TILE_WIDTH = 80;
-    GAMEINFO.GAMESCREEN_TILE_HEIGHT = 45;
+    GAMEINFO.TILESIZE = 16;
+    GAMEINFO.GAME_PIXEL_WIDTH = 800;
+    GAMEINFO.GAME_PIXEL_HEIGHT = 448;
+    GAMEINFO.GAME_TILE_WIDTH = GAMEINFO.GAME_PIXEL_WIDTH / GAMEINFO.TILESIZE;
+    GAMEINFO.GAME_TILE_HEIGHT = GAMEINFO.GAME_PIXEL_HEIGHT / GAMEINFO.TILESIZE;
+    GAMEINFO.GAMESCREEN_TILE_WIDTH = 40;
+    GAMEINFO.GAMESCREEN_TILE_HEIGHT = 22;
+    GAMEINFO.SIDEBAR_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH - GAMEINFO.GAMESCREEN_TILE_WIDTH;
+    GAMEINFO.SIDEBAR_TILE_HEIGHT = GAMEINFO.GAME_TILE_HEIGHT;
+    GAMEINFO.TEXTLOG_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH - GAMEINFO.SIDEBAR_TILE_WIDTH;
+    GAMEINFO.TEXTLOG_TILE_HEIGHT = GAMEINFO.GAME_TILE_HEIGHT - GAMEINFO.GAMESCREEN_TILE_HEIGHT;
 })(GAMEINFO || (GAMEINFO = {}));
 var TileSet = (function () {
     function TileSet() {
@@ -73,6 +82,9 @@ var Level = (function () {
         this.width = width;
         this.height = height;
         this.camera = camera;
+        this.MiniMap = document.createElement("canvas");
+        this.MiniMap.width = 160;
+        this.MiniMap.height = 160;
     }
     Level.prototype.floodFill = function (x, y, target, fill) {
         var maxX = this.width - 1;
@@ -129,67 +141,122 @@ var Level = (function () {
     };
     Level.prototype.update = function () {
         if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
-            this.camera.xOffset += 1;
+            if (this.camera.xOffset <= 0)
+                return;
+            this.camera.xOffset -= 3;
             this.redraw = true;
         }
         else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
-            this.camera.xOffset -= 1;
+            if (this.camera.xOffset + this.camera.width > this.width)
+                return;
+            this.camera.xOffset += 3;
             this.redraw = true;
         }
         if (Input.KB.isDown(Input.KB.KEY.UP)) {
-            this.camera.yOffset += 1;
+            if (this.camera.yOffset <= 0)
+                return;
+            this.camera.yOffset -= 3;
             this.redraw = true;
         }
         else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
-            this.camera.yOffset -= 1;
+            if (this.camera.yOffset + this.camera.height > this.height)
+                return;
+            this.camera.yOffset += 3;
             this.redraw = true;
         }
     };
     Level.prototype.draw = function (ctx) {
         for (var tx = this.camera.xOffset, x = 0; tx < this.camera.xOffset + this.camera.width; tx++) {
             for (var ty = this.camera.yOffset, y = 0; ty < this.camera.yOffset + this.camera.height; ty++) {
-                if (!this.cells[tx]) {
-                    ctx.fillStyle = "#000";
-                    ctx.fillRect(x * 8, y * 8, 8, 8);
-                    y++;
-                    continue;
-                }
-                if (!this.cells[tx][ty]) {
-                    ctx.fillStyle = "#000";
-                    ctx.fillRect(x * 8, y * 8, 8, 8);
+                if (!this.cells[tx] || !this.cells[tx][ty]) {
+                    ctx.fillStyle = "#333333";
+                    ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
                     y++;
                     continue;
                 }
                 var tCell = this.cells[tx][ty];
                 if (!tCell.discovered) {
                     ctx.fillStyle = "black";
-                    ctx.fillRect(x * 8, y * 8, 8, 8);
+                    ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
                 }
                 else if (!tCell.visable) {
                     ctx.fillStyle = "#bbb";
-                    ctx.fillRect(x * 8, y * 8, 8, 8);
+                    ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
                 }
                 else {
                     switch (tCell.tileID) {
                         case 0:
-                            ctx.fillStyle = "#000";
+                            ctx.fillStyle = "#333333";
                             break;
                         case 1:
                             ctx.fillStyle = "#AAA";
                             break;
                         case 2:
-                            ctx.fillStyle = "#0FF";
+                            ctx.fillStyle = "#999999";
                             break;
                         default:
                             ctx.fillStyle = "#FFF";
                             break;
                     }
-                    ctx.fillRect(x * 8, y * 8, 8, 8);
+                    ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
                 }
                 y++;
             }
             x++;
         }
+    };
+    Level.prototype.renderMiniMap = function () {
+        var ctx = this.MiniMap.getContext("2d");
+        for (var tx = 0, x = 0; tx < this.width; tx++) {
+            for (var ty = 0, y = 0; ty < this.height; ty++) {
+                if (!this.cells[tx]) {
+                    ctx.fillStyle = "#333333";
+                    ctx.fillRect(x, y, 1, 1);
+                    y++;
+                    continue;
+                }
+                if (!this.cells[tx][ty]) {
+                    ctx.fillStyle = "#333333";
+                    ctx.fillRect(x, y, 1, 1);
+                    y++;
+                    continue;
+                }
+                var tCell = this.cells[tx][ty];
+                if (!tCell.discovered) {
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(x, y, 1, 1);
+                }
+                else if (!tCell.visable) {
+                    ctx.fillStyle = "#bbb";
+                    ctx.fillRect(x, y, 1, 1);
+                }
+                else {
+                    switch (tCell.tileID) {
+                        case 0:
+                            ctx.fillStyle = "#333333";
+                            break;
+                        case 1:
+                            ctx.fillStyle = "#AAA";
+                            break;
+                        case 2:
+                            ctx.fillStyle = "#999999";
+                            break;
+                        default:
+                            ctx.fillStyle = "#FFF";
+                            break;
+                    }
+                    ctx.fillRect(x, y, 1, 1);
+                }
+                y++;
+            }
+            x++;
+        }
+    };
+    Level.prototype.drawMiniMap = function (ctx) {
+        ctx.drawImage(this.MiniMap, GAMEINFO.GAME_PIXEL_WIDTH - this.width, GAMEINFO.GAME_PIXEL_HEIGHT - this.height, this.width, this.height, 0, 0, this.width, this.height);
+        ctx.strokeStyle = "#FFF";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(GAMEINFO.GAME_PIXEL_WIDTH - this.width + this.camera.xOffset, GAMEINFO.GAME_PIXEL_HEIGHT - this.height + this.camera.yOffset, this.camera.width, this.camera.height);
     };
     return Level;
 }());
@@ -369,7 +436,7 @@ var Dungeon = (function (_super) {
                 this.cells[x][y] = new Cell(0);
             }
         }
-        this.generate(25);
+        this.generate(32);
     }
     Dungeon.prototype.scan = function (room, wall, adjustForDoor) {
         var result = true;
@@ -532,7 +599,6 @@ var Dungeon = (function (_super) {
             }
             feature = randomInt(0, 100);
         }
-        console.log(gRooms);
     };
     return Dungeon;
 }(Level));
@@ -600,10 +666,16 @@ var Game = (function () {
         this.ctx = screen.getContext("2d");
         this.ctx.mozImageSmoothingEnabled = false;
         this.ctx.imageSmoothingEnabled = false;
+        this.buffer = document.createElement("canvas");
+        this.buffer.width = GAMEINFO.GAME_PIXEL_WIDTH;
+        this.buffer.height = GAMEINFO.GAME_PIXEL_HEIGHT;
+        this.bufferCtx = this.buffer.getContext("2d");
+        this.bufferCtx.mozImageSmoothingEnabled = false;
+        this.bufferCtx.imageSmoothingEnabled = false;
     }
     Game.prototype.init = function () {
         console.log("Initializing...");
-        this.level = new Dungeon(100, 100, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
+        this.level = new Dungeon(160, 160, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
         this.state = "MainMenu";
     };
     Game.prototype.update = function (delta) {
@@ -637,14 +709,16 @@ var Game = (function () {
                 if (this.clearScreen) {
                     this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
                     this.ctx.fillStyle = "#bbb";
-                    this.ctx.fillRect(0, 360, 640, this.screen.height);
+                    this.ctx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
                     this.ctx.fillStyle = "#ddd";
-                    this.ctx.fillRect(640, 0, this.screen.height, this.screen.width);
+                    this.ctx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
+                    this.level.renderMiniMap();
                     this.clearScreen = false;
                 }
                 if (this.level.redraw) {
-                    this.ctx.clearRect(0, 0, GAMEINFO.GAMESCREEN_TILE_WIDTH * 8, GAMEINFO.GAMESCREEN_TILE_HEIGHT * 8);
-                    this.level.draw(this.ctx);
+                    this.level.draw(this.bufferCtx);
+                    this.level.drawMiniMap(this.bufferCtx);
+                    this.ctx.drawImage(this.buffer, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
                     this.level.redraw = false;
                 }
                 break;

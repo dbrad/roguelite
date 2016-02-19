@@ -69,7 +69,7 @@ class Dungeon extends Level {
         this.cells[x][y] = new Cell(0);
       }
     }
-    this.generate(25);
+    this.generate(32);
   }
 
   scan(room: Room, wall: WALL, adjustForDoor: boolean): boolean {
@@ -241,7 +241,5 @@ class Dungeon extends Level {
       }
       feature = randomInt(0, 100);
     }
-    console.log(gRooms);
-
   }
 }

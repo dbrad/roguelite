@@ -11,7 +11,9 @@ interface Context2D extends CanvasRenderingContext2D {
 class Game {
     private _loopHandle: number;
     private ctx: Context2D;
+    private bufferCtx: Context2D;
     private screen: HTMLCanvasElement;
+    private buffer: HTMLCanvasElement;
 
     public level: Level;
 
@@ -23,12 +25,19 @@ class Game {
         this.ctx = <Context2D>screen.getContext("2d");
         this.ctx.mozImageSmoothingEnabled = false;
         this.ctx.imageSmoothingEnabled = false;
+
+        this.buffer = document.createElement("canvas");
+        this.buffer.width = GAMEINFO.GAME_PIXEL_WIDTH;
+        this.buffer.height = GAMEINFO.GAME_PIXEL_HEIGHT;
+
+        this.bufferCtx = <Context2D>this.buffer.getContext("2d");
+        this.bufferCtx.mozImageSmoothingEnabled = false;
+        this.bufferCtx.imageSmoothingEnabled = false;
     }
 
     init(): void {
         console.log("Initializing...");
-        /** Initalize Player and World */
-        this.level = new Dungeon(100, 100, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
+        this.level = new Dungeon(160, 160, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
         this.state = "MainMenu";
     }
 
@@ -70,15 +79,21 @@ class Game {
             case "Game":
                 if (this.clearScreen) {
                     this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
+
                     this.ctx.fillStyle = "#bbb";
-                    this.ctx.fillRect(0, 360, 640, this.screen.height);
+                    this.ctx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
+
                     this.ctx.fillStyle = "#ddd";
-                    this.ctx.fillRect(640, 0, this.screen.height, this.screen.width);
+                    this.ctx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
+                    this.level.renderMiniMap();
                     this.clearScreen = false;
                 }
                 if (this.level.redraw) {
-                  this.ctx.clearRect(0, 0, GAMEINFO.GAMESCREEN_TILE_WIDTH * 8, GAMEINFO.GAMESCREEN_TILE_HEIGHT * 8);
-                  this.level.draw(this.ctx);
+                  // this.ctx.clearRect(0, 0, GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE);
+                  this.level.draw(this.bufferCtx);
+                  this.level.drawMiniMap(this.bufferCtx);
+
+                  this.ctx.drawImage(this.buffer, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
                   this.level.redraw = false;
                 }
                 // draw
