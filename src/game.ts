@@ -28,7 +28,7 @@ class Game {
     init(): void {
         console.log("Initializing...");
         /** Initalize Player and World */
-        this.level = new Dungeon(200, 200, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
+        this.level = new Dungeon(100, 100, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
         this.state = "MainMenu";
     }
 

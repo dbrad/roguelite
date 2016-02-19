@@ -14,7 +14,7 @@ var Game = (function () {
     }
     Game.prototype.init = function () {
         console.log("Initializing...");
-        this.level = new Dungeon(200, 200, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
+        this.level = new Dungeon(100, 100, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
         this.state = "MainMenu";
     };
     Game.prototype.update = function (delta) {
