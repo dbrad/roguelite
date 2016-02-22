@@ -61,6 +61,7 @@ var Dungeon = (function (_super) {
     __extends(Dungeon, _super);
     function Dungeon(width, height, camera) {
         _super.call(this, width, height, camera);
+        this.rooms = [];
         for (var x = 0; x < this.width; x++) {
             for (var y = 0; y < this.height; y++) {
                 if (this.cells[x] === undefined)
@@ -103,53 +104,30 @@ var Dungeon = (function (_super) {
     Dungeon.prototype.addDoor = function (p) {
         this.cells[p.x][p.y].tileID = 3;
     };
-    Dungeon.prototype.makeRoom = function (p, lastWasRoom) {
+    Dungeon.prototype.makeRoom = function (p, feature, adjustForDoor) {
         if (p === void 0) { p = { x: -1, y: -1, w: -1 }; }
-        if (lastWasRoom === void 0) { lastWasRoom = true; }
+        if (feature === void 0) { feature = "R"; }
+        if (adjustForDoor === void 0) { adjustForDoor = true; }
         var room = new Room();
-        do {
-            room.w = randomInt(5, this.width / 5);
-            room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
-            room.h = randomInt(5, this.height / 5);
-            room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
-        } while (room.w * room.h > (this.width * this.height) / 4);
-        room.x = (p.w === WALL.N || p.w === WALL.S) ? p.x - Math.floor(room.w / 2) : p.x;
-        room.x = (p.w === WALL.W) ? room.x - (room.w - 1) : room.x;
-        room.y = (p.w === WALL.W || p.w === WALL.E) ? p.y - Math.floor(room.h / 2) : p.y;
-        room.y = (p.w === WALL.N) ? room.y - (room.h - 1) : room.y;
-        if (!lastWasRoom) {
-            switch (p.w) {
-                case WALL.N:
-                    room.y -= 1;
-                    break;
-                case WALL.S:
-                    room.y += 1;
-                    break;
-                case WALL.W:
-                    room.x -= 1;
-                    break;
-                case WALL.E:
-                    room.x += 1;
-                    break;
-                default:
-                    break;
-            }
+        if (feature === "R") {
+            do {
+                room.w = randomInt(3, this.width / 5);
+                room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
+                room.h = randomInt(3, this.height / 5);
+                room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
+            } while (room.w * room.h > (this.width * this.height) / 4);
         }
-        return room;
-    };
-    Dungeon.prototype.makeCorridor = function (p, lastWasRoom) {
-        if (p === void 0) { p = { x: -1, y: -1, w: -1 }; }
-        if (lastWasRoom === void 0) { lastWasRoom = true; }
-        var room = new Room();
-        room.w = (p.w === WALL.N || p.w === WALL.S) ? 3 : randomInt(5, 9);
-        room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
-        room.h = (p.w === WALL.W || p.w === WALL.E) ? 3 : randomInt(5, 9);
-        room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
+        else if (feature === "C") {
+            room.w = (p.w === WALL.N || p.w === WALL.S) ? 3 : randomInt(5, 9);
+            room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
+            room.h = (p.w === WALL.W || p.w === WALL.E) ? 3 : randomInt(5, 9);
+            room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
+        }
         room.x = (p.w === WALL.N || p.w === WALL.S) ? p.x - Math.floor(room.w / 2) : p.x;
         room.x = (p.w === WALL.W) ? room.x - (room.w - 1) : room.x;
         room.y = (p.w === WALL.W || p.w === WALL.E) ? p.y - Math.floor(room.h / 2) : p.y;
         room.y = (p.w === WALL.N) ? room.y - (room.h - 1) : room.y;
-        if (lastWasRoom) {
+        if (adjustForDoor) {
             switch (p.w) {
                 case WALL.N:
                     room.y -= 1;
@@ -170,66 +148,67 @@ var Dungeon = (function (_super) {
         return room;
     };
     Dungeon.prototype.generate = function (rooms) {
-        var roomArray = [];
         var gRooms = 0;
         var weight = 0;
-        var lastWasRoom = true;
+        var currentFeature = "";
+        var lastFeature = "R";
         var attempts = 0;
         var feature = randomInt(0, 100);
         var room = this.makeRoom();
         room.x = Math.floor((this.width / 2) - (room.w / 2));
         room.y = Math.floor((this.height / 2) - (room.h / 2));
-        roomArray[roomArray.length] = room;
+        this.rooms[this.rooms.length] = room;
         this.addRoom(room);
         gRooms++;
         var p;
-        while (roomArray.length > 0 && gRooms < rooms) {
+        while (this.rooms.length > 0 && gRooms < rooms) {
             if (feature > (65 + weight)) {
-                do {
-                    if (attempts > 5 || attempts === 0) {
-                        if (roomArray[roomArray.length - 1].walls.length === 0)
-                            roomArray.pop();
-                        if (roomArray.length === 0)
-                            break;
-                        p = roomArray[roomArray.length - 1].getRandomWall();
-                    }
-                    room = this.makeCorridor(p, lastWasRoom);
-                    attempts++;
-                } while (!this.scan(room, p.w, lastWasRoom));
-                attempts = 0;
-                if (roomArray.length === 0)
-                    break;
-                if (lastWasRoom)
-                    this.addDoor(p);
-                roomArray[roomArray.length] = room;
-                this.addRoom(room);
-                weight += 10;
-                lastWasRoom = false;
+                currentFeature = "C";
             }
             else {
-                do {
-                    if (attempts > 5 || attempts === 0) {
-                        if (roomArray[roomArray.length - 1].walls.length === 0)
-                            roomArray.pop();
-                        if (roomArray.length === 0)
-                            break;
-                        p = roomArray[roomArray.length - 1].getRandomWall();
-                    }
-                    room = this.makeRoom(p, lastWasRoom);
-                    attempts++;
-                } while (!this.scan(room, p.w, !lastWasRoom));
-                attempts = 0;
-                if (roomArray.length === 0)
-                    break;
-                if (!lastWasRoom)
-                    this.addDoor(p);
-                roomArray[roomArray.length] = room;
-                this.addRoom(room);
+                currentFeature = "R";
+            }
+            do {
+                if (attempts > 5 || attempts === 0) {
+                    if (this.rooms[this.rooms.length - 1].walls.length === 0)
+                        this.rooms.pop();
+                    if (this.rooms.length === 0)
+                        break;
+                    p = this.rooms[this.rooms.length - 1].getRandomWall();
+                }
+                room = this.makeRoom(p, currentFeature, currentFeature !== lastFeature);
+                attempts++;
+            } while (!this.scan(room, p.w, currentFeature !== lastFeature));
+            attempts = 0;
+            if (this.rooms.length === 0)
+                break;
+            if (currentFeature !== lastFeature)
+                this.addDoor(p);
+            this.rooms[this.rooms.length] = room;
+            this.addRoom(room);
+            if (currentFeature === "C") {
+                weight += 10;
+            }
+            else {
                 gRooms++;
                 weight -= 10;
-                lastWasRoom = true;
             }
+            lastFeature = currentFeature;
+            currentFeature = "";
             feature = randomInt(0, 100);
+        }
+        for (var x = 0; x < this.width; x++) {
+            for (var y = 0; y < this.height; y++) {
+                if (this.cells[x][y].tileID === 2) {
+                    for (var ix = -1; ix <= 1; ix++) {
+                        for (var iy = -1; iy <= 1; iy++) {
+                            if (this.cells[x + ix] && this.cells[x + ix][y + iy] && this.cells[x + ix][y + iy].tileID === 0) {
+                                this.cells[x + ix][y + iy].tileID = 4;
+                            }
+                        }
+                    }
+                }
+            }
         }
     };
     return Dungeon;

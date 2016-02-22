@@ -1,29 +1,37 @@
 namespace GAMEINFO {
-  export const TILESIZE = 16;
+  export const TILESIZE = 8;
   export const GAME_PIXEL_WIDTH = 800;
   export const GAME_PIXEL_HEIGHT = 448;
 
   export const GAME_TILE_WIDTH = GAME_PIXEL_WIDTH / TILESIZE;
   export const GAME_TILE_HEIGHT = GAME_PIXEL_HEIGHT / TILESIZE;
 
-  export const GAMESCREEN_TILE_WIDTH = 40;
-  export const GAMESCREEN_TILE_HEIGHT = 22;
+  export const TEXTLOG_TILE_HEIGHT = 12;
+
+  export const GAMESCREEN_TILE_WIDTH = GAME_TILE_WIDTH * .8; // 40;
+  export const GAMESCREEN_TILE_HEIGHT = GAME_TILE_HEIGHT - TEXTLOG_TILE_HEIGHT;
 
   export const SIDEBAR_TILE_WIDTH = GAME_TILE_WIDTH - GAMESCREEN_TILE_WIDTH;
   export const SIDEBAR_TILE_HEIGHT = GAME_TILE_HEIGHT;
 
   export const TEXTLOG_TILE_WIDTH = GAME_TILE_WIDTH - SIDEBAR_TILE_WIDTH;
-  export const TEXTLOG_TILE_HEIGHT = GAME_TILE_HEIGHT - GAMESCREEN_TILE_HEIGHT;
+
 }
 
 class TileSet {}
 interface ComponentDictionary {
   [index: string]: Component;
 }
+
 class Entity {
   public components: ComponentDictionary;
+  public id: number;
+  private static autoID: number;
   constructor() {
     this.components = {};
+    if (!Entity.autoID)
+      Entity.autoID = 0;
+    this.id = Entity.autoID++;
   }
   addComponent(component: Component) {
     this.components[component.name] = component;
@@ -41,6 +49,13 @@ class IsPlayerCom extends Component {
   public value: boolean = true;
   constructor() {
     super("isPlayer");
+  }
+}
+class TilePosCom extends Component {
+  public x: number = 0;
+  public y: number = 0;
+  constructor() {
+    super("pos");
   }
 }
 
@@ -80,42 +95,133 @@ class Camera {
 
 class Level {
   public redraw: boolean = true;
+  public render_m: boolean = true;
+  public render_mm: boolean = true;
   public cells: Cell[][];
   protected width: number;
   protected height: number;
   protected MiniMap: HTMLCanvasElement;
+  protected renderCache: HTMLCanvasElement;
 
   public camera: Camera;
 
   protected tileSet: TileSet;
   protected ItemList: Item[];
-  protected EntityList: Entity[];
+  public EntityList: Entity[];
 
   constructor(width: number, height: number, camera: Camera) {
     this.cells = [];
     this.width = width;
     this.height = height;
     this.camera = camera;
-    this.MiniMap = document.createElement("canvas");
-    this.MiniMap.width = 160;
-    this.MiniMap.height = 160;
-  }
+    this.EntityList = [];
 
+    this.MiniMap = document.createElement("canvas");
+    this.MiniMap.width = width;
+    this.MiniMap.height = height;
+
+    this.renderCache = document.createElement("canvas");
+    this.renderCache.width = (width * GAMEINFO.TILESIZE);
+    this.renderCache.height = (height * GAMEINFO.TILESIZE);
+  }
+  private partOfRoom(cell: Cell) {
+    return (cell.tileID === 2);
+  }
+  public floodDiscover(x: number, y: number) {
+    let maxX: number = this.width - 1;
+    let maxY: number = this.height - 1;
+    let stack: Point[] = [];
+    let index: number = 0;
+
+    if (!stack[index])
+      stack[index] = {x: 0, y: 0};
+    stack[0].x = x;
+    stack[0].y = y;
+    this.cells[x][y].discovered = true;
+
+    while (index >= 0) {
+      if (!stack[index])
+        stack[index] = {x: 0, y: 0};
+
+      x = stack[index].x;
+      y = stack[index].y;
+
+      index--;
+
+      if ((x > 0) && this.partOfRoom(this.cells[x - 1][y]) && !this.cells[x - 1][y].discovered) {
+        this.cells[x - 1][y].discovered = true;
+        index++;
+        if (!stack[index])
+          stack[index] = {x: 0, y: 0};
+
+        stack[index].x = x - 1;
+        stack[index].y = y;
+      }
+
+      if ((x < maxX) && this.partOfRoom(this.cells[x + 1][y]) && !this.cells[x + 1][y].discovered) {
+        this.cells[x + 1][y].discovered = true;
+        index++;
+        if (!stack[index])
+          stack[index] = {x: 0, y: 0};
+
+        stack[index].x = x + 1;
+        stack[index].y = y;
+      }
+
+      if ((y > 0) && this.partOfRoom(this.cells[x][y - 1]) && !this.cells[x][y - 1].discovered) {
+        this.cells[x][y - 1].discovered = true;
+        index++;
+        if (!stack[index])
+          stack[index] = {x: 0, y: 0};
+
+        stack[index].x = x;
+        stack[index].y = y - 1;
+      }
+
+      if ((y < maxY) && this.partOfRoom(this.cells[x][y + 1]) && !this.cells[x][y + 1].discovered) {
+        this.cells[x][y + 1].discovered = true;
+        index++;
+        if (!stack[index])
+          stack[index] = {x: 0, y: 0};
+
+        stack[index].x = x;
+        stack[index].y = y + 1;
+      }
+    }
+    for (let x = 0; x < this.width; x++) {
+      for (let y = 0; y < this.height; y++) {
+        if (this.cells[x][y].tileID === 2 && this.cells[x][y].discovered) {
+          for (let ix = -1; ix <= 1; ix++) {
+            for (let iy = -1; iy <= 1; iy++) {
+              if (this.cells[x + ix] && this.cells[x + ix][y + iy] && !this.cells[x + ix][y + iy].discovered) {
+                this.cells[x + ix][y + iy].discovered = true;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  public floodVision() {
+
+  }
   protected floodFill(x: number, y: number, target: number, fill: number) {
     let maxX: number = this.width - 1;
     let maxY: number = this.height - 1;
-    let stack: number[][] = [];
+    let stack: Point[] = [];
     let index: number = 0;
 
-    stack[0] = [];
-
-    stack[0][0] = x;
-    stack[0][1] = y;
+    if (!stack[index])
+      stack[index] = {x: 0, y: 0};
+    stack[0].x = x;
+    stack[0].y = y;
     this.cells[x][y].tileID = fill;
 
     while (index >= 0) {
-      x = stack[index][0];
-      y = stack[index][1];
+      if (!stack[index])
+        stack[index] = {x: 0, y: 0};
+      x = stack[index].x;
+      y = stack[index].y;
 
       index--;
 
@@ -123,40 +229,40 @@ class Level {
         this.cells[x - 1][y].tileID = fill;
         index++;
         if (!stack[index])
-          stack[index] = [];
+          stack[index] = {x: 0, y: 0};
 
-        stack[index][0] = x - 1;
-        stack[index][1] = y;
+        stack[index].x = x - 1;
+        stack[index].y = y;
       }
 
       if ((x < maxX) && (this.cells[x + 1][y].tileID === target)) {
         this.cells[x + 1][y].tileID = fill;
         index++;
         if (!stack[index])
-          stack[index] = [];
+          stack[index] = {x: 0, y: 0};
 
-        stack[index][0] = x + 1;
-        stack[index][1] = y;
+        stack[index].x = x + 1;
+        stack[index].y = y;
       }
 
       if ((y > 0) && (this.cells[x][y - 1].tileID === target)) {
         this.cells[x][y - 1].tileID = fill;
         index++;
         if (!stack[index])
-          stack[index] = [];
+          stack[index] = {x: 0, y: 0};
 
-        stack[index][0] = x;
-        stack[index][1] = y - 1;
+        stack[index].x = x;
+        stack[index].y = y - 1;
       }
 
       if ((y < maxY) && (this.cells[x][y + 1].tileID === target)) {
         this.cells[x][y + 1].tileID = fill;
         index++;
         if (!stack[index])
-          stack[index] = [];
+          stack[index] = {x: 0, y: 0};
 
-        stack[index][0] = x;
-        stack[index][1] = y + 1;
+        stack[index].x = x;
+        stack[index].y = y + 1;
       }
     }
   }
@@ -170,32 +276,42 @@ class Level {
   }
 
   update(): void {
+    let step: number = 1;
     if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
-      if (this.camera.xOffset <= 0) return;
-      this.camera.xOffset -= 3;
+      this.camera.xOffset -= step;
       this.redraw = true;
+      if (this.camera.xOffset <= 0) {
+        this.camera.xOffset = 0;
+      }
     } else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
-      if (this.camera.xOffset + this.camera.width > this.width) return;
-      this.camera.xOffset += 3;
+      this.camera.xOffset += step;
       this.redraw = true;
+      if (this.camera.xOffset + this.camera.width >= this.width) {
+        this.camera.xOffset = (this.width - this.camera.width);
+      }
     }
 
     if (Input.KB.isDown(Input.KB.KEY.UP)) {
-      if (this.camera.yOffset <= 0) return;
-      this.camera.yOffset -= 3;
+      this.camera.yOffset -= step;
       this.redraw = true;
+      if (this.camera.yOffset <= 0) {
+        this.camera.yOffset = 0;
+      }
     } else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
-      if (this.camera.yOffset + this.camera.height > this.height) return;
-      this.camera.yOffset += 3;
+      this.camera.yOffset += step;
       this.redraw = true;
+      if (this.camera.yOffset + this.camera.height >= this.height) {
+        this.camera.yOffset = (this.height - this.camera.height);
+      }
     }
   }
 
-  draw(ctx: Context2D): void {
-    for (let tx = this.camera.xOffset, x = 0; tx < this.camera.xOffset + this.camera.width; tx++) {
-      for (let ty =  this.camera.yOffset, y = 0; ty < this.camera.yOffset + this.camera.height; ty++) {
+  render(): void {
+    let ctx: Context2D = <Context2D>this.renderCache.getContext("2d");
+    for (let tx = 0, x = 0; tx < this.width; tx++) {
+      for (let ty = 0, y = 0; ty < this.height; ty++) {
         if (!this.cells[tx] || !this.cells[tx][ty]) {
-          ctx.fillStyle = "#333333";
+          ctx.fillStyle = "#000";
           ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
           y++;
           continue;
@@ -206,18 +322,24 @@ class Level {
           ctx.fillStyle = "black";
           ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
         } else if (!tCell.visable) {
-          ctx.fillStyle = "#bbb";
+          ctx.fillStyle = "#222";
           ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
         } else {
           switch (tCell.tileID) {
             case 0: // Wall
-              ctx.fillStyle = "#333333";
+              ctx.fillStyle = "#000";
               break;
             case 1:
               ctx.fillStyle = "#AAA";
               break;
             case 2:
               ctx.fillStyle = "#999999";
+              break;
+            case 3:
+              ctx.fillStyle = "#FFF";
+              break;
+            case 4:
+              ctx.fillStyle = "#222";
               break;
             default:
               ctx.fillStyle = "#FFF";
@@ -230,19 +352,28 @@ class Level {
       x++;
     }
   }
+  draw(ctx: Context2D): void {
+    if (this.render_m) {
+      this.render();
+      this.render_m = false;
+    }
+    ctx.drawImage(
+      this.renderCache,
+      this.camera.xOffset * GAMEINFO.TILESIZE, this.camera.yOffset * GAMEINFO.TILESIZE,
+      GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE,
+      0, 0,
+      GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE );
+
+      ctx.fillText("Camera x: " + this.camera.xOffset * GAMEINFO.TILESIZE, 10, 12);
+      ctx.fillText("Camera y: " + this.camera.yOffset * GAMEINFO.TILESIZE, 10, 24);
+  }
   renderMiniMap(): void {
     let ctx: Context2D = <Context2D>this.MiniMap.getContext("2d");
 
     for (let tx = 0, x = 0; tx < this.width; tx++) {
       for (let ty =  0, y = 0; ty < this.height; ty++) {
-        if (!this.cells[tx]) {
-          ctx.fillStyle = "#333333";
-          ctx.fillRect(x, y, 1, 1);
-          y++;
-          continue;
-        }
-        if (!this.cells[tx][ty]) {
-          ctx.fillStyle = "#333333";
+        if (!this.cells[tx] || !this.cells[tx][ty]) {
+          ctx.fillStyle = "#000";
           ctx.fillRect(x, y, 1, 1);
           y++;
           continue;
@@ -250,21 +381,27 @@ class Level {
 
         let tCell = this.cells[tx][ty];
         if (!tCell.discovered) {
-          ctx.fillStyle = "black";
+          ctx.fillStyle = "#000";
           ctx.fillRect(x, y, 1, 1);
         } else if (!tCell.visable) {
-          ctx.fillStyle = "#bbb";
+          ctx.fillStyle = "#222";
           ctx.fillRect(x, y, 1, 1);
         } else {
           switch (tCell.tileID) {
             case 0: // Wall
-              ctx.fillStyle = "#333333";
+              ctx.fillStyle = "#000";
               break;
             case 1:
               ctx.fillStyle = "#AAA";
               break;
             case 2:
               ctx.fillStyle = "#999999";
+              break;
+            case 3:
+              ctx.fillStyle = "#FFF";
+              break;
+            case 4:
+              ctx.fillStyle = "#222";
               break;
             default:
               ctx.fillStyle = "#FFF";
@@ -278,10 +415,34 @@ class Level {
     }
   }
   drawMiniMap(ctx: Context2D): void {
-    ctx.drawImage(this.MiniMap, GAMEINFO.GAME_PIXEL_WIDTH - this.width, GAMEINFO.GAME_PIXEL_HEIGHT - this.height, this.width, this.height, 0, 0, this.width, this.height );
+    if (this.render_mm) {
+      this.renderMiniMap();
+      this.render_mm = false;
+    }
+    ctx.drawImage(this.MiniMap,
+      0, 0,
+      this.MiniMap.width, this.MiniMap.height,
+      GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width, GAMEINFO.GAME_PIXEL_HEIGHT - this.MiniMap.height,
+      this.MiniMap.width, this.MiniMap.height );
 
     ctx.strokeStyle = "#FFF";
     ctx.lineWidth = 2;
     ctx.strokeRect(GAMEINFO.GAME_PIXEL_WIDTH - this.width + this.camera.xOffset, GAMEINFO.GAME_PIXEL_HEIGHT - this.height + this.camera.yOffset, this.camera.width, this.camera.height );
+  }
+  drawEntities(ctx: Context2D) {
+    ctx.fillStyle = "#F00";
+    for (let e of this.EntityList) {
+      let t: TilePosCom = <TilePosCom>(e.components["pos"]);
+      if ((t.x * GAMEINFO.TILESIZE) + GAMEINFO.TILESIZE > this.camera.xOffset * GAMEINFO.TILESIZE
+        && (t.x * GAMEINFO.TILESIZE)  < (this.camera.xOffset + this.camera.width) * GAMEINFO.TILESIZE
+        && (t.y * GAMEINFO.TILESIZE) + GAMEINFO.TILESIZE > this.camera.yOffset * GAMEINFO.TILESIZE
+        && (t.y * GAMEINFO.TILESIZE) < (this.camera.yOffset + this.camera.height) * GAMEINFO.TILESIZE) {
+        ctx.fillRect(
+          (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE),
+          (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE),
+          GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
+      }
+    }
+
   }
 }

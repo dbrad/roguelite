@@ -38,6 +38,14 @@ class Game {
     init(): void {
         console.log("Initializing...");
         this.level = new Dungeon(160, 160, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
+        this.level.floodDiscover(80, 80);
+        let player = new Entity();
+        player.addComponent(new IsPlayerCom());
+        player.addComponent(new TilePosCom());
+
+        (<TilePosCom>player.components["pos"]).x = 80;
+        (<TilePosCom>player.components["pos"]).y = 80;
+        this.level.EntityList.push(player);
         this.state = "MainMenu";
     }
 
@@ -77,23 +85,26 @@ class Game {
             case "MainMenu":
                 break;
             case "Game":
-                if (this.clearScreen) {
+                if (this.clearScreen || this.level.redraw) {
                     this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
-
-                    this.ctx.fillStyle = "#bbb";
-                    this.ctx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
-
-                    this.ctx.fillStyle = "#ddd";
-                    this.ctx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
-                    this.level.renderMiniMap();
                     this.clearScreen = false;
                 }
                 if (this.level.redraw) {
                   // this.ctx.clearRect(0, 0, GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE);
                   this.level.draw(this.bufferCtx);
+
+                  this.bufferCtx.fillStyle = "#bbb";
+                  this.bufferCtx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
+
+                  this.bufferCtx.fillStyle = "#ddd";
+                  this.bufferCtx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
+                  this.level.drawEntities(this.bufferCtx);
                   this.level.drawMiniMap(this.bufferCtx);
 
-                  this.ctx.drawImage(this.buffer, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
+                  this.ctx.drawImage(
+                    this.buffer,
+                    0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT,
+                    0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
                   this.level.redraw = false;
                 }
                 // draw

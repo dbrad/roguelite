@@ -5,17 +5,17 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var GAMEINFO;
 (function (GAMEINFO) {
-    GAMEINFO.TILESIZE = 16;
+    GAMEINFO.TILESIZE = 8;
     GAMEINFO.GAME_PIXEL_WIDTH = 800;
     GAMEINFO.GAME_PIXEL_HEIGHT = 448;
     GAMEINFO.GAME_TILE_WIDTH = GAMEINFO.GAME_PIXEL_WIDTH / GAMEINFO.TILESIZE;
     GAMEINFO.GAME_TILE_HEIGHT = GAMEINFO.GAME_PIXEL_HEIGHT / GAMEINFO.TILESIZE;
-    GAMEINFO.GAMESCREEN_TILE_WIDTH = 40;
-    GAMEINFO.GAMESCREEN_TILE_HEIGHT = 22;
+    GAMEINFO.TEXTLOG_TILE_HEIGHT = 12;
+    GAMEINFO.GAMESCREEN_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH * .8;
+    GAMEINFO.GAMESCREEN_TILE_HEIGHT = GAMEINFO.GAME_TILE_HEIGHT - GAMEINFO.TEXTLOG_TILE_HEIGHT;
     GAMEINFO.SIDEBAR_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH - GAMEINFO.GAMESCREEN_TILE_WIDTH;
     GAMEINFO.SIDEBAR_TILE_HEIGHT = GAMEINFO.GAME_TILE_HEIGHT;
     GAMEINFO.TEXTLOG_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH - GAMEINFO.SIDEBAR_TILE_WIDTH;
-    GAMEINFO.TEXTLOG_TILE_HEIGHT = GAMEINFO.GAME_TILE_HEIGHT - GAMEINFO.GAMESCREEN_TILE_HEIGHT;
 })(GAMEINFO || (GAMEINFO = {}));
 var TileSet = (function () {
     function TileSet() {
@@ -25,6 +25,9 @@ var TileSet = (function () {
 var Entity = (function () {
     function Entity() {
         this.components = {};
+        if (!Entity.autoID)
+            Entity.autoID = 0;
+        this.id = Entity.autoID++;
     }
     Entity.prototype.addComponent = function (component) {
         this.components[component.name] = component;
@@ -45,6 +48,15 @@ var IsPlayerCom = (function (_super) {
         this.value = true;
     }
     return IsPlayerCom;
+}(Component));
+var TilePosCom = (function (_super) {
+    __extends(TilePosCom, _super);
+    function TilePosCom() {
+        _super.call(this, "pos");
+        this.x = 0;
+        this.y = 0;
+    }
+    return TilePosCom;
 }(Component));
 var Item = (function () {
     function Item() {
@@ -78,58 +90,135 @@ var Camera = (function () {
 var Level = (function () {
     function Level(width, height, camera) {
         this.redraw = true;
+        this.render_m = true;
+        this.render_mm = true;
         this.cells = [];
         this.width = width;
         this.height = height;
         this.camera = camera;
+        this.EntityList = [];
         this.MiniMap = document.createElement("canvas");
-        this.MiniMap.width = 160;
-        this.MiniMap.height = 160;
+        this.MiniMap.width = width;
+        this.MiniMap.height = height;
+        this.renderCache = document.createElement("canvas");
+        this.renderCache.width = (width * GAMEINFO.TILESIZE);
+        this.renderCache.height = (height * GAMEINFO.TILESIZE);
     }
+    Level.prototype.partOfRoom = function (cell) {
+        return (cell.tileID === 2);
+    };
+    Level.prototype.floodDiscover = function (x, y) {
+        var maxX = this.width - 1;
+        var maxY = this.height - 1;
+        var stack = [];
+        var index = 0;
+        if (!stack[index])
+            stack[index] = { x: 0, y: 0 };
+        stack[0].x = x;
+        stack[0].y = y;
+        this.cells[x][y].discovered = true;
+        while (index >= 0) {
+            if (!stack[index])
+                stack[index] = { x: 0, y: 0 };
+            x = stack[index].x;
+            y = stack[index].y;
+            index--;
+            if ((x > 0) && this.partOfRoom(this.cells[x - 1][y]) && !this.cells[x - 1][y].discovered) {
+                this.cells[x - 1][y].discovered = true;
+                index++;
+                if (!stack[index])
+                    stack[index] = { x: 0, y: 0 };
+                stack[index].x = x - 1;
+                stack[index].y = y;
+            }
+            if ((x < maxX) && this.partOfRoom(this.cells[x + 1][y]) && !this.cells[x + 1][y].discovered) {
+                this.cells[x + 1][y].discovered = true;
+                index++;
+                if (!stack[index])
+                    stack[index] = { x: 0, y: 0 };
+                stack[index].x = x + 1;
+                stack[index].y = y;
+            }
+            if ((y > 0) && this.partOfRoom(this.cells[x][y - 1]) && !this.cells[x][y - 1].discovered) {
+                this.cells[x][y - 1].discovered = true;
+                index++;
+                if (!stack[index])
+                    stack[index] = { x: 0, y: 0 };
+                stack[index].x = x;
+                stack[index].y = y - 1;
+            }
+            if ((y < maxY) && this.partOfRoom(this.cells[x][y + 1]) && !this.cells[x][y + 1].discovered) {
+                this.cells[x][y + 1].discovered = true;
+                index++;
+                if (!stack[index])
+                    stack[index] = { x: 0, y: 0 };
+                stack[index].x = x;
+                stack[index].y = y + 1;
+            }
+        }
+        for (var x_1 = 0; x_1 < this.width; x_1++) {
+            for (var y_1 = 0; y_1 < this.height; y_1++) {
+                if (this.cells[x_1][y_1].tileID === 2 && this.cells[x_1][y_1].discovered) {
+                    for (var ix = -1; ix <= 1; ix++) {
+                        for (var iy = -1; iy <= 1; iy++) {
+                            if (this.cells[x_1 + ix] && this.cells[x_1 + ix][y_1 + iy] && !this.cells[x_1 + ix][y_1 + iy].discovered) {
+                                this.cells[x_1 + ix][y_1 + iy].discovered = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+    Level.prototype.floodVision = function () {
+    };
     Level.prototype.floodFill = function (x, y, target, fill) {
         var maxX = this.width - 1;
         var maxY = this.height - 1;
         var stack = [];
         var index = 0;
-        stack[0] = [];
-        stack[0][0] = x;
-        stack[0][1] = y;
+        if (!stack[index])
+            stack[index] = { x: 0, y: 0 };
+        stack[0].x = x;
+        stack[0].y = y;
         this.cells[x][y].tileID = fill;
         while (index >= 0) {
-            x = stack[index][0];
-            y = stack[index][1];
+            if (!stack[index])
+                stack[index] = { x: 0, y: 0 };
+            x = stack[index].x;
+            y = stack[index].y;
             index--;
             if ((x > 0) && (this.cells[x - 1][y].tileID === target)) {
                 this.cells[x - 1][y].tileID = fill;
                 index++;
                 if (!stack[index])
-                    stack[index] = [];
-                stack[index][0] = x - 1;
-                stack[index][1] = y;
+                    stack[index] = { x: 0, y: 0 };
+                stack[index].x = x - 1;
+                stack[index].y = y;
             }
             if ((x < maxX) && (this.cells[x + 1][y].tileID === target)) {
                 this.cells[x + 1][y].tileID = fill;
                 index++;
                 if (!stack[index])
-                    stack[index] = [];
-                stack[index][0] = x + 1;
-                stack[index][1] = y;
+                    stack[index] = { x: 0, y: 0 };
+                stack[index].x = x + 1;
+                stack[index].y = y;
             }
             if ((y > 0) && (this.cells[x][y - 1].tileID === target)) {
                 this.cells[x][y - 1].tileID = fill;
                 index++;
                 if (!stack[index])
-                    stack[index] = [];
-                stack[index][0] = x;
-                stack[index][1] = y - 1;
+                    stack[index] = { x: 0, y: 0 };
+                stack[index].x = x;
+                stack[index].y = y - 1;
             }
             if ((y < maxY) && (this.cells[x][y + 1].tileID === target)) {
                 this.cells[x][y + 1].tileID = fill;
                 index++;
                 if (!stack[index])
-                    stack[index] = [];
-                stack[index][0] = x;
-                stack[index][1] = y + 1;
+                    stack[index] = { x: 0, y: 0 };
+                stack[index].x = x;
+                stack[index].y = y + 1;
             }
         }
     };
@@ -140,36 +229,42 @@ var Level = (function () {
         return this.height;
     };
     Level.prototype.update = function () {
+        var step = 1;
         if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
-            if (this.camera.xOffset <= 0)
-                return;
-            this.camera.xOffset -= 3;
+            this.camera.xOffset -= step;
             this.redraw = true;
+            if (this.camera.xOffset <= 0) {
+                this.camera.xOffset = 0;
+            }
         }
         else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
-            if (this.camera.xOffset + this.camera.width > this.width)
-                return;
-            this.camera.xOffset += 3;
+            this.camera.xOffset += step;
             this.redraw = true;
+            if (this.camera.xOffset + this.camera.width >= this.width) {
+                this.camera.xOffset = (this.width - this.camera.width);
+            }
         }
         if (Input.KB.isDown(Input.KB.KEY.UP)) {
-            if (this.camera.yOffset <= 0)
-                return;
-            this.camera.yOffset -= 3;
+            this.camera.yOffset -= step;
             this.redraw = true;
+            if (this.camera.yOffset <= 0) {
+                this.camera.yOffset = 0;
+            }
         }
         else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
-            if (this.camera.yOffset + this.camera.height > this.height)
-                return;
-            this.camera.yOffset += 3;
+            this.camera.yOffset += step;
             this.redraw = true;
+            if (this.camera.yOffset + this.camera.height >= this.height) {
+                this.camera.yOffset = (this.height - this.camera.height);
+            }
         }
     };
-    Level.prototype.draw = function (ctx) {
-        for (var tx = this.camera.xOffset, x = 0; tx < this.camera.xOffset + this.camera.width; tx++) {
-            for (var ty = this.camera.yOffset, y = 0; ty < this.camera.yOffset + this.camera.height; ty++) {
+    Level.prototype.render = function () {
+        var ctx = this.renderCache.getContext("2d");
+        for (var tx = 0, x = 0; tx < this.width; tx++) {
+            for (var ty = 0, y = 0; ty < this.height; ty++) {
                 if (!this.cells[tx] || !this.cells[tx][ty]) {
-                    ctx.fillStyle = "#333333";
+                    ctx.fillStyle = "#000";
                     ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
                     y++;
                     continue;
@@ -180,19 +275,25 @@ var Level = (function () {
                     ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
                 }
                 else if (!tCell.visable) {
-                    ctx.fillStyle = "#bbb";
+                    ctx.fillStyle = "#222";
                     ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
                 }
                 else {
                     switch (tCell.tileID) {
                         case 0:
-                            ctx.fillStyle = "#333333";
+                            ctx.fillStyle = "#000";
                             break;
                         case 1:
                             ctx.fillStyle = "#AAA";
                             break;
                         case 2:
                             ctx.fillStyle = "#999999";
+                            break;
+                        case 3:
+                            ctx.fillStyle = "#FFF";
+                            break;
+                        case 4:
+                            ctx.fillStyle = "#222";
                             break;
                         default:
                             ctx.fillStyle = "#FFF";
@@ -205,41 +306,50 @@ var Level = (function () {
             x++;
         }
     };
+    Level.prototype.draw = function (ctx) {
+        if (this.render_m) {
+            this.render();
+            this.render_m = false;
+        }
+        ctx.drawImage(this.renderCache, this.camera.xOffset * GAMEINFO.TILESIZE, this.camera.yOffset * GAMEINFO.TILESIZE, GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, 0, 0, GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE);
+        ctx.fillText("Camera x: " + this.camera.xOffset * GAMEINFO.TILESIZE, 10, 12);
+        ctx.fillText("Camera y: " + this.camera.yOffset * GAMEINFO.TILESIZE, 10, 24);
+    };
     Level.prototype.renderMiniMap = function () {
         var ctx = this.MiniMap.getContext("2d");
         for (var tx = 0, x = 0; tx < this.width; tx++) {
             for (var ty = 0, y = 0; ty < this.height; ty++) {
-                if (!this.cells[tx]) {
-                    ctx.fillStyle = "#333333";
-                    ctx.fillRect(x, y, 1, 1);
-                    y++;
-                    continue;
-                }
-                if (!this.cells[tx][ty]) {
-                    ctx.fillStyle = "#333333";
+                if (!this.cells[tx] || !this.cells[tx][ty]) {
+                    ctx.fillStyle = "#000";
                     ctx.fillRect(x, y, 1, 1);
                     y++;
                     continue;
                 }
                 var tCell = this.cells[tx][ty];
                 if (!tCell.discovered) {
-                    ctx.fillStyle = "black";
+                    ctx.fillStyle = "#000";
                     ctx.fillRect(x, y, 1, 1);
                 }
                 else if (!tCell.visable) {
-                    ctx.fillStyle = "#bbb";
+                    ctx.fillStyle = "#222";
                     ctx.fillRect(x, y, 1, 1);
                 }
                 else {
                     switch (tCell.tileID) {
                         case 0:
-                            ctx.fillStyle = "#333333";
+                            ctx.fillStyle = "#000";
                             break;
                         case 1:
                             ctx.fillStyle = "#AAA";
                             break;
                         case 2:
                             ctx.fillStyle = "#999999";
+                            break;
+                        case 3:
+                            ctx.fillStyle = "#FFF";
+                            break;
+                        case 4:
+                            ctx.fillStyle = "#222";
                             break;
                         default:
                             ctx.fillStyle = "#FFF";
@@ -253,10 +363,27 @@ var Level = (function () {
         }
     };
     Level.prototype.drawMiniMap = function (ctx) {
-        ctx.drawImage(this.MiniMap, GAMEINFO.GAME_PIXEL_WIDTH - this.width, GAMEINFO.GAME_PIXEL_HEIGHT - this.height, this.width, this.height, 0, 0, this.width, this.height);
+        if (this.render_mm) {
+            this.renderMiniMap();
+            this.render_mm = false;
+        }
+        ctx.drawImage(this.MiniMap, 0, 0, this.MiniMap.width, this.MiniMap.height, GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width, GAMEINFO.GAME_PIXEL_HEIGHT - this.MiniMap.height, this.MiniMap.width, this.MiniMap.height);
         ctx.strokeStyle = "#FFF";
         ctx.lineWidth = 2;
         ctx.strokeRect(GAMEINFO.GAME_PIXEL_WIDTH - this.width + this.camera.xOffset, GAMEINFO.GAME_PIXEL_HEIGHT - this.height + this.camera.yOffset, this.camera.width, this.camera.height);
+    };
+    Level.prototype.drawEntities = function (ctx) {
+        ctx.fillStyle = "#F00";
+        for (var _i = 0, _a = this.EntityList; _i < _a.length; _i++) {
+            var e = _a[_i];
+            var t = (e.components["pos"]);
+            if ((t.x * GAMEINFO.TILESIZE) + GAMEINFO.TILESIZE > this.camera.xOffset * GAMEINFO.TILESIZE
+                && (t.x * GAMEINFO.TILESIZE) < (this.camera.xOffset + this.camera.width) * GAMEINFO.TILESIZE
+                && (t.y * GAMEINFO.TILESIZE) + GAMEINFO.TILESIZE > this.camera.yOffset * GAMEINFO.TILESIZE
+                && (t.y * GAMEINFO.TILESIZE) < (this.camera.yOffset + this.camera.height) * GAMEINFO.TILESIZE) {
+                ctx.fillRect((t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE), (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE), GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
+            }
+        }
     };
     return Level;
 }());
@@ -429,6 +556,7 @@ var Dungeon = (function (_super) {
     __extends(Dungeon, _super);
     function Dungeon(width, height, camera) {
         _super.call(this, width, height, camera);
+        this.rooms = [];
         for (var x = 0; x < this.width; x++) {
             for (var y = 0; y < this.height; y++) {
                 if (this.cells[x] === undefined)
@@ -471,53 +599,30 @@ var Dungeon = (function (_super) {
     Dungeon.prototype.addDoor = function (p) {
         this.cells[p.x][p.y].tileID = 3;
     };
-    Dungeon.prototype.makeRoom = function (p, lastWasRoom) {
+    Dungeon.prototype.makeRoom = function (p, feature, adjustForDoor) {
         if (p === void 0) { p = { x: -1, y: -1, w: -1 }; }
-        if (lastWasRoom === void 0) { lastWasRoom = true; }
+        if (feature === void 0) { feature = "R"; }
+        if (adjustForDoor === void 0) { adjustForDoor = true; }
         var room = new Room();
-        do {
-            room.w = randomInt(5, this.width / 5);
-            room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
-            room.h = randomInt(5, this.height / 5);
-            room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
-        } while (room.w * room.h > (this.width * this.height) / 4);
-        room.x = (p.w === WALL.N || p.w === WALL.S) ? p.x - Math.floor(room.w / 2) : p.x;
-        room.x = (p.w === WALL.W) ? room.x - (room.w - 1) : room.x;
-        room.y = (p.w === WALL.W || p.w === WALL.E) ? p.y - Math.floor(room.h / 2) : p.y;
-        room.y = (p.w === WALL.N) ? room.y - (room.h - 1) : room.y;
-        if (!lastWasRoom) {
-            switch (p.w) {
-                case WALL.N:
-                    room.y -= 1;
-                    break;
-                case WALL.S:
-                    room.y += 1;
-                    break;
-                case WALL.W:
-                    room.x -= 1;
-                    break;
-                case WALL.E:
-                    room.x += 1;
-                    break;
-                default:
-                    break;
-            }
+        if (feature === "R") {
+            do {
+                room.w = randomInt(3, this.width / 5);
+                room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
+                room.h = randomInt(3, this.height / 5);
+                room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
+            } while (room.w * room.h > (this.width * this.height) / 4);
         }
-        return room;
-    };
-    Dungeon.prototype.makeCorridor = function (p, lastWasRoom) {
-        if (p === void 0) { p = { x: -1, y: -1, w: -1 }; }
-        if (lastWasRoom === void 0) { lastWasRoom = true; }
-        var room = new Room();
-        room.w = (p.w === WALL.N || p.w === WALL.S) ? 3 : randomInt(5, 9);
-        room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
-        room.h = (p.w === WALL.W || p.w === WALL.E) ? 3 : randomInt(5, 9);
-        room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
+        else if (feature === "C") {
+            room.w = (p.w === WALL.N || p.w === WALL.S) ? 3 : randomInt(5, 9);
+            room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
+            room.h = (p.w === WALL.W || p.w === WALL.E) ? 3 : randomInt(5, 9);
+            room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
+        }
         room.x = (p.w === WALL.N || p.w === WALL.S) ? p.x - Math.floor(room.w / 2) : p.x;
         room.x = (p.w === WALL.W) ? room.x - (room.w - 1) : room.x;
         room.y = (p.w === WALL.W || p.w === WALL.E) ? p.y - Math.floor(room.h / 2) : p.y;
         room.y = (p.w === WALL.N) ? room.y - (room.h - 1) : room.y;
-        if (lastWasRoom) {
+        if (adjustForDoor) {
             switch (p.w) {
                 case WALL.N:
                     room.y -= 1;
@@ -538,66 +643,67 @@ var Dungeon = (function (_super) {
         return room;
     };
     Dungeon.prototype.generate = function (rooms) {
-        var roomArray = [];
         var gRooms = 0;
         var weight = 0;
-        var lastWasRoom = true;
+        var currentFeature = "";
+        var lastFeature = "R";
         var attempts = 0;
         var feature = randomInt(0, 100);
         var room = this.makeRoom();
         room.x = Math.floor((this.width / 2) - (room.w / 2));
         room.y = Math.floor((this.height / 2) - (room.h / 2));
-        roomArray[roomArray.length] = room;
+        this.rooms[this.rooms.length] = room;
         this.addRoom(room);
         gRooms++;
         var p;
-        while (roomArray.length > 0 && gRooms < rooms) {
+        while (this.rooms.length > 0 && gRooms < rooms) {
             if (feature > (65 + weight)) {
-                do {
-                    if (attempts > 5 || attempts === 0) {
-                        if (roomArray[roomArray.length - 1].walls.length === 0)
-                            roomArray.pop();
-                        if (roomArray.length === 0)
-                            break;
-                        p = roomArray[roomArray.length - 1].getRandomWall();
-                    }
-                    room = this.makeCorridor(p, lastWasRoom);
-                    attempts++;
-                } while (!this.scan(room, p.w, lastWasRoom));
-                attempts = 0;
-                if (roomArray.length === 0)
-                    break;
-                if (lastWasRoom)
-                    this.addDoor(p);
-                roomArray[roomArray.length] = room;
-                this.addRoom(room);
-                weight += 10;
-                lastWasRoom = false;
+                currentFeature = "C";
             }
             else {
-                do {
-                    if (attempts > 5 || attempts === 0) {
-                        if (roomArray[roomArray.length - 1].walls.length === 0)
-                            roomArray.pop();
-                        if (roomArray.length === 0)
-                            break;
-                        p = roomArray[roomArray.length - 1].getRandomWall();
-                    }
-                    room = this.makeRoom(p, lastWasRoom);
-                    attempts++;
-                } while (!this.scan(room, p.w, !lastWasRoom));
-                attempts = 0;
-                if (roomArray.length === 0)
-                    break;
-                if (!lastWasRoom)
-                    this.addDoor(p);
-                roomArray[roomArray.length] = room;
-                this.addRoom(room);
+                currentFeature = "R";
+            }
+            do {
+                if (attempts > 5 || attempts === 0) {
+                    if (this.rooms[this.rooms.length - 1].walls.length === 0)
+                        this.rooms.pop();
+                    if (this.rooms.length === 0)
+                        break;
+                    p = this.rooms[this.rooms.length - 1].getRandomWall();
+                }
+                room = this.makeRoom(p, currentFeature, currentFeature !== lastFeature);
+                attempts++;
+            } while (!this.scan(room, p.w, currentFeature !== lastFeature));
+            attempts = 0;
+            if (this.rooms.length === 0)
+                break;
+            if (currentFeature !== lastFeature)
+                this.addDoor(p);
+            this.rooms[this.rooms.length] = room;
+            this.addRoom(room);
+            if (currentFeature === "C") {
+                weight += 10;
+            }
+            else {
                 gRooms++;
                 weight -= 10;
-                lastWasRoom = true;
             }
+            lastFeature = currentFeature;
+            currentFeature = "";
             feature = randomInt(0, 100);
+        }
+        for (var x = 0; x < this.width; x++) {
+            for (var y = 0; y < this.height; y++) {
+                if (this.cells[x][y].tileID === 2) {
+                    for (var ix = -1; ix <= 1; ix++) {
+                        for (var iy = -1; iy <= 1; iy++) {
+                            if (this.cells[x + ix] && this.cells[x + ix][y + iy] && this.cells[x + ix][y + iy].tileID === 0) {
+                                this.cells[x + ix][y + iy].tileID = 4;
+                            }
+                        }
+                    }
+                }
+            }
         }
     };
     return Dungeon;
@@ -676,6 +782,13 @@ var Game = (function () {
     Game.prototype.init = function () {
         console.log("Initializing...");
         this.level = new Dungeon(160, 160, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
+        this.level.floodDiscover(80, 80);
+        var player = new Entity();
+        player.addComponent(new IsPlayerCom());
+        player.addComponent(new TilePosCom());
+        player.components["pos"].x = 80;
+        player.components["pos"].y = 80;
+        this.level.EntityList.push(player);
         this.state = "MainMenu";
     };
     Game.prototype.update = function (delta) {
@@ -706,17 +819,17 @@ var Game = (function () {
             case "MainMenu":
                 break;
             case "Game":
-                if (this.clearScreen) {
+                if (this.clearScreen || this.level.redraw) {
                     this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
-                    this.ctx.fillStyle = "#bbb";
-                    this.ctx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
-                    this.ctx.fillStyle = "#ddd";
-                    this.ctx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
-                    this.level.renderMiniMap();
                     this.clearScreen = false;
                 }
                 if (this.level.redraw) {
                     this.level.draw(this.bufferCtx);
+                    this.bufferCtx.fillStyle = "#bbb";
+                    this.bufferCtx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
+                    this.bufferCtx.fillStyle = "#ddd";
+                    this.bufferCtx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
+                    this.level.drawEntities(this.bufferCtx);
                     this.level.drawMiniMap(this.bufferCtx);
                     this.ctx.drawImage(this.buffer, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
                     this.level.redraw = false;
