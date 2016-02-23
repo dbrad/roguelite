@@ -5,12 +5,12 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var GAMEINFO;
 (function (GAMEINFO) {
-    GAMEINFO.TILESIZE = 8;
+    GAMEINFO.TILESIZE = 16;
     GAMEINFO.GAME_PIXEL_WIDTH = 800;
     GAMEINFO.GAME_PIXEL_HEIGHT = 448;
     GAMEINFO.GAME_TILE_WIDTH = GAMEINFO.GAME_PIXEL_WIDTH / GAMEINFO.TILESIZE;
     GAMEINFO.GAME_TILE_HEIGHT = GAMEINFO.GAME_PIXEL_HEIGHT / GAMEINFO.TILESIZE;
-    GAMEINFO.TEXTLOG_TILE_HEIGHT = 12;
+    GAMEINFO.TEXTLOG_TILE_HEIGHT = 6;
     GAMEINFO.GAMESCREEN_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH * .8;
     GAMEINFO.GAMESCREEN_TILE_HEIGHT = GAMEINFO.GAME_TILE_HEIGHT - GAMEINFO.TEXTLOG_TILE_HEIGHT;
     GAMEINFO.SIDEBAR_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH - GAMEINFO.GAMESCREEN_TILE_WIDTH;
@@ -72,7 +72,7 @@ var Cell = (function () {
         this.entityID = entityID;
         this.itemIDs = itemIDs;
         this.visable = true;
-        this.discovered = true;
+        this.discovered = false;
     }
     return Cell;
 }());
@@ -92,6 +92,7 @@ var Level = (function () {
         this.redraw = true;
         this.render_m = true;
         this.render_mm = true;
+        this.camThresh = 12;
         this.cells = [];
         this.width = width;
         this.height = height;
@@ -104,6 +105,16 @@ var Level = (function () {
         this.renderCache.width = (width * GAMEINFO.TILESIZE);
         this.renderCache.height = (height * GAMEINFO.TILESIZE);
     }
+    Level.prototype.snapCamera = function () {
+        if (this.camera.xOffset <= 0)
+            this.camera.xOffset = 0;
+        if (this.camera.xOffset + this.camera.width >= this.width)
+            this.camera.xOffset = (this.width - this.camera.width);
+        if (this.camera.yOffset <= 0)
+            this.camera.yOffset = 0;
+        if (this.camera.yOffset + this.camera.height >= this.height)
+            this.camera.yOffset = (this.height - this.camera.height);
+    };
     Level.prototype.partOfRoom = function (cell) {
         return (cell.tileID === 2);
     };
@@ -230,33 +241,55 @@ var Level = (function () {
     };
     Level.prototype.update = function () {
         var step = 1;
+        var player = this.EntityList[0];
+        var playerPos = player["pos"];
         if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
-            this.camera.xOffset -= step;
-            this.redraw = true;
-            if (this.camera.xOffset <= 0) {
-                this.camera.xOffset = 0;
+            if (this.cells[playerPos.x - 1][playerPos.y].tileID !== 4) {
+                playerPos.x--;
+                if (playerPos.x < this.camera.xOffset + this.camThresh) {
+                    this.camera.xOffset -= step;
+                    if (this.camera.xOffset <= 0)
+                        this.camera.xOffset = 0;
+                }
             }
+            this.redraw = true;
         }
         else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
-            this.camera.xOffset += step;
-            this.redraw = true;
-            if (this.camera.xOffset + this.camera.width >= this.width) {
-                this.camera.xOffset = (this.width - this.camera.width);
+            if (this.cells[playerPos.x + 1][playerPos.y].tileID !== 4) {
+                playerPos.x++;
+                if (playerPos.x >= this.camera.xOffset + this.camera.width - this.camThresh) {
+                    this.camera.xOffset += step;
+                    if (this.camera.xOffset + this.camera.width >= this.width)
+                        this.camera.xOffset = (this.width - this.camera.width);
+                }
             }
+            this.redraw = true;
         }
         if (Input.KB.isDown(Input.KB.KEY.UP)) {
-            this.camera.yOffset -= step;
-            this.redraw = true;
-            if (this.camera.yOffset <= 0) {
-                this.camera.yOffset = 0;
+            if (this.cells[playerPos.x][playerPos.y - 1].tileID !== 4) {
+                playerPos.y--;
+                if (playerPos.y < this.camera.yOffset + (this.camThresh / 2)) {
+                    this.camera.yOffset -= step;
+                    if (this.camera.yOffset <= 0)
+                        this.camera.yOffset = 0;
+                }
             }
+            this.redraw = true;
         }
         else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
-            this.camera.yOffset += step;
-            this.redraw = true;
-            if (this.camera.yOffset + this.camera.height >= this.height) {
-                this.camera.yOffset = (this.height - this.camera.height);
+            if (this.cells[playerPos.x][playerPos.y + 1].tileID !== 4) {
+                playerPos.y++;
+                if (playerPos.y >= this.camera.yOffset + this.camera.height - (this.camThresh / 2)) {
+                    this.camera.yOffset += step;
+                    if (this.camera.yOffset + this.camera.height >= this.height)
+                        this.camera.yOffset = (this.height - this.camera.height);
+                }
             }
+            this.redraw = true;
+        }
+        if (!this.cells[playerPos.x][playerPos.y].discovered) {
+            this.floodDiscover(playerPos.x, playerPos.y);
+            this.render_m = this.render_mm = true;
         }
     };
     Level.prototype.render = function () {
@@ -294,6 +327,9 @@ var Level = (function () {
                             break;
                         case 4:
                             ctx.fillStyle = "#222";
+                            break;
+                        case 5:
+                            ctx.fillStyle = "#0F0";
                             break;
                         default:
                             ctx.fillStyle = "#FFF";
@@ -350,6 +386,9 @@ var Level = (function () {
                             break;
                         case 4:
                             ctx.fillStyle = "#222";
+                            break;
+                        case 5:
+                            ctx.fillStyle = "#0F0";
                             break;
                         default:
                             ctx.fillStyle = "#FFF";

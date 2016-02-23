@@ -101,19 +101,20 @@ var Dungeon = (function (_super) {
             }
         }
     };
-    Dungeon.prototype.addDoor = function (p) {
-        this.cells[p.x][p.y].tileID = 3;
+    Dungeon.prototype.addTile = function (p, tid) {
+        this.cells[p.x][p.y].tileID = tid;
     };
     Dungeon.prototype.makeRoom = function (p, feature, adjustForDoor) {
         if (p === void 0) { p = { x: -1, y: -1, w: -1 }; }
         if (feature === void 0) { feature = "R"; }
-        if (adjustForDoor === void 0) { adjustForDoor = true; }
+        if (adjustForDoor === void 0) { adjustForDoor = false; }
         var room = new Room();
+        room.roomType = feature;
         if (feature === "R") {
             do {
-                room.w = randomInt(3, this.width / 5);
+                room.w = randomInt(5, this.width / 5);
                 room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
-                room.h = randomInt(3, this.height / 5);
+                room.h = randomInt(5, this.height / 5);
                 room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
             } while (room.w * room.h > (this.width * this.height) / 4);
         }
@@ -150,18 +151,22 @@ var Dungeon = (function (_super) {
     Dungeon.prototype.generate = function (rooms) {
         var gRooms = 0;
         var weight = 0;
+        var roomStack = [];
         var currentFeature = "";
         var lastFeature = "R";
         var attempts = 0;
         var feature = randomInt(0, 100);
         var room = this.makeRoom();
-        room.x = Math.floor((this.width / 2) - (room.w / 2));
-        room.y = Math.floor((this.height / 2) - (room.h / 2));
-        this.rooms[this.rooms.length] = room;
+        room.x = randomInt(0, Math.floor(this.width - room.w));
+        room.y = randomInt(0, Math.floor(this.height - room.h));
+        roomStack[roomStack.length] = room;
         this.addRoom(room);
+        this.rooms.push(room);
         gRooms++;
+        this.entrance = { x: room.x + Math.floor(room.w / 2), y: room.y + Math.floor(room.h / 2) };
+        this.addTile(this.entrance, 5);
         var p;
-        while (this.rooms.length > 0 && gRooms < rooms) {
+        while (roomStack.length > 0 && gRooms < rooms) {
             if (feature > (65 + weight)) {
                 currentFeature = "C";
             }
@@ -170,30 +175,32 @@ var Dungeon = (function (_super) {
             }
             do {
                 if (attempts > 5 || attempts === 0) {
-                    if (this.rooms[this.rooms.length - 1].walls.length === 0)
-                        this.rooms.pop();
-                    if (this.rooms.length === 0)
+                    if (roomStack[roomStack.length - 1].walls.length === 0)
+                        roomStack.pop();
+                    if (roomStack.length === 0)
                         break;
-                    p = this.rooms[this.rooms.length - 1].getRandomWall();
+                    p = roomStack[roomStack.length - 1].getRandomWall();
+                    lastFeature = roomStack[roomStack.length - 1].roomType;
                 }
                 room = this.makeRoom(p, currentFeature, currentFeature !== lastFeature);
                 attempts++;
             } while (!this.scan(room, p.w, currentFeature !== lastFeature));
             attempts = 0;
-            if (this.rooms.length === 0)
+            if (roomStack.length === 0)
                 break;
             if (currentFeature !== lastFeature)
-                this.addDoor(p);
-            this.rooms[this.rooms.length] = room;
+                this.addTile(p, 3);
+            roomStack[roomStack.length] = room;
             this.addRoom(room);
             if (currentFeature === "C") {
                 weight += 10;
             }
             else {
+                this.rooms.push(room);
                 gRooms++;
                 weight -= 10;
             }
-            lastFeature = currentFeature;
+            lastFeature = roomStack[roomStack.length - 1].roomType;
             currentFeature = "";
             feature = randomInt(0, 100);
         }

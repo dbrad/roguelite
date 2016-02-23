@@ -1,12 +1,12 @@
 namespace GAMEINFO {
-  export const TILESIZE = 8;
+  export const TILESIZE = 16;
   export const GAME_PIXEL_WIDTH = 800;
   export const GAME_PIXEL_HEIGHT = 448;
 
   export const GAME_TILE_WIDTH = GAME_PIXEL_WIDTH / TILESIZE;
   export const GAME_TILE_HEIGHT = GAME_PIXEL_HEIGHT / TILESIZE;
 
-  export const TEXTLOG_TILE_HEIGHT = 12;
+  export const TEXTLOG_TILE_HEIGHT = 6;
 
   export const GAMESCREEN_TILE_WIDTH = GAME_TILE_WIDTH * .8; // 40;
   export const GAMESCREEN_TILE_HEIGHT = GAME_TILE_HEIGHT - TEXTLOG_TILE_HEIGHT;
@@ -76,7 +76,7 @@ class Cell {
     this.entityID = entityID;
     this.itemIDs = itemIDs;
     this.visable = true;
-    this.discovered = true;
+    this.discovered = false;
   }
 }
 
@@ -102,6 +102,8 @@ class Level {
   protected height: number;
   protected MiniMap: HTMLCanvasElement;
   protected renderCache: HTMLCanvasElement;
+  public entrance: Point;
+  protected exit: Point;
 
   public camera: Camera;
 
@@ -123,6 +125,17 @@ class Level {
     this.renderCache = document.createElement("canvas");
     this.renderCache.width = (width * GAMEINFO.TILESIZE);
     this.renderCache.height = (height * GAMEINFO.TILESIZE);
+  }
+
+  public snapCamera() {
+    if (this.camera.xOffset <= 0)
+      this.camera.xOffset = 0;
+    if (this.camera.xOffset + this.camera.width >= this.width)
+      this.camera.xOffset = (this.width - this.camera.width);
+    if (this.camera.yOffset <= 0)
+      this.camera.yOffset = 0;
+    if (this.camera.yOffset + this.camera.height >= this.height)
+      this.camera.yOffset = (this.height - this.camera.height);
   }
   private partOfRoom(cell: Cell) {
     return (cell.tileID === 2);
@@ -275,34 +288,59 @@ class Level {
     return this.height;
   }
 
+  private camThresh: number = 12;
   update(): void {
     let step: number = 1;
+    let player: Entity = this.EntityList[0];
+    let playerPos: TilePosCom = player["pos"];
+
     if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
-      this.camera.xOffset -= step;
-      this.redraw = true;
-      if (this.camera.xOffset <= 0) {
-        this.camera.xOffset = 0;
+      if (this.cells[playerPos.x - 1][playerPos.y].tileID !== 4) {
+        playerPos.x--;
+        if (playerPos.x < this.camera.xOffset + this.camThresh) {
+          this.camera.xOffset -= step;
+          if (this.camera.xOffset <= 0)
+            this.camera.xOffset = 0;
+        }
       }
+      this.redraw = true;
     } else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
-      this.camera.xOffset += step;
-      this.redraw = true;
-      if (this.camera.xOffset + this.camera.width >= this.width) {
-        this.camera.xOffset = (this.width - this.camera.width);
+      if (this.cells[playerPos.x + 1][playerPos.y].tileID !== 4) {
+        playerPos.x++;
+        if (playerPos.x >= this.camera.xOffset + this.camera.width - this.camThresh) {
+          this.camera.xOffset += step;
+          if (this.camera.xOffset + this.camera.width >= this.width)
+            this.camera.xOffset = (this.width - this.camera.width);
+        }
       }
+      this.redraw = true;
     }
 
     if (Input.KB.isDown(Input.KB.KEY.UP)) {
-      this.camera.yOffset -= step;
-      this.redraw = true;
-      if (this.camera.yOffset <= 0) {
-        this.camera.yOffset = 0;
+      if (this.cells[playerPos.x][playerPos.y - 1].tileID !== 4) {
+        playerPos.y--;
+        if (playerPos.y < this.camera.yOffset + (this.camThresh / 2)) {
+          this.camera.yOffset -= step;
+          if (this.camera.yOffset <= 0)
+            this.camera.yOffset = 0;
+        }
       }
+      this.redraw = true;
     } else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
-      this.camera.yOffset += step;
-      this.redraw = true;
-      if (this.camera.yOffset + this.camera.height >= this.height) {
-        this.camera.yOffset = (this.height - this.camera.height);
+      if (this.cells[playerPos.x][playerPos.y + 1].tileID !== 4) {
+        playerPos.y++;
+        if (playerPos.y >= this.camera.yOffset + this.camera.height - (this.camThresh / 2)) {
+          this.camera.yOffset += step;
+          if (this.camera.yOffset + this.camera.height >= this.height)
+            this.camera.yOffset = (this.height - this.camera.height);
+        }
       }
+      this.redraw = true;
+    }
+
+    if (!this.cells[playerPos.x][playerPos.y].discovered) {
+      this.floodDiscover(playerPos.x, playerPos.y);
+      this.render_m = this.render_mm = true;
     }
   }
 
@@ -326,20 +364,23 @@ class Level {
           ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
         } else {
           switch (tCell.tileID) {
-            case 0: // Wall
+            case 0: // Void / Unused
               ctx.fillStyle = "#000";
               break;
             case 1:
               ctx.fillStyle = "#AAA";
               break;
-            case 2:
+            case 2: // Floor
               ctx.fillStyle = "#999999";
               break;
-            case 3:
+            case 3: // Door
               ctx.fillStyle = "#FFF";
               break;
-            case 4:
+            case 4: // Wall
               ctx.fillStyle = "#222";
+              break;
+            case 5: // Stairs Up
+              ctx.fillStyle = "#0F0";
               break;
             default:
               ctx.fillStyle = "#FFF";
@@ -402,6 +443,9 @@ class Level {
               break;
             case 4:
               ctx.fillStyle = "#222";
+              break;
+            case 5: // Stairs Up
+              ctx.fillStyle = "#0F0";
               break;
             default:
               ctx.fillStyle = "#FFF";

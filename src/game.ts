@@ -38,13 +38,16 @@ class Game {
     init(): void {
         console.log("Initializing...");
         this.level = new Dungeon(160, 160, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
-        this.level.floodDiscover(80, 80);
+        this.level.floodDiscover(this.level.entrance.x, this.level.entrance.y);
+        this.level.camera.xOffset = this.level.entrance.x - (this.level.camera.width / 2);
+        this.level.camera.yOffset = this.level.entrance.y - (this.level.camera.height / 2);
+        this.level.snapCamera();
         let player = new Entity();
         player.addComponent(new IsPlayerCom());
         player.addComponent(new TilePosCom());
 
-        (<TilePosCom>player.components["pos"]).x = 80;
-        (<TilePosCom>player.components["pos"]).y = 80;
+        (<TilePosCom>player.components["pos"]).x = this.level.entrance.x;
+        (<TilePosCom>player.components["pos"]).y = this.level.entrance.y;
         this.level.EntityList.push(player);
         this.state = "MainMenu";
     }

@@ -28,6 +28,7 @@ class Room {
   w: number;
   h: number;
   walls: WALL[];
+  roomType: string;
   constructor() {
     this.x = 0;
     this.y = 0;
@@ -106,17 +107,19 @@ class Dungeon extends Level {
       }
     }
   }
-  addDoor(p: Point): void {
-    this.cells[p.x][p.y].tileID = 3;
+  addTile(p: Point, tid: number): void {
+    this.cells[p.x][p.y].tileID = tid;
   }
-  makeRoom(p: {x: number, y: number, w: WALL} = { x: -1, y: -1, w: -1 }, feature: string = "R", adjustForDoor: boolean = true): Room {
+  makeRoom(p: {x: number, y: number, w: WALL} = { x: -1, y: -1, w: -1 }, feature: string = "R", adjustForDoor: boolean = false): Room {
     let room: Room = new Room();
+    room.roomType = feature;
+
     if (feature === "R") {
       do {
-        room.w = randomInt(3, this.width / 5);
+        room.w = randomInt(5, this.width / 5);
         room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
 
-        room.h = randomInt(3, this.height / 5);
+        room.h = randomInt(5, this.height / 5);
         room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
       } while (room.w * room.h > (this.width * this.height) / 4);
     } else if ( feature === "C") {
@@ -156,6 +159,7 @@ class Dungeon extends Level {
   generate(rooms: number) {
     let gRooms: number = 0;
     let weight: number = 0;
+    let roomStack: Room[] = [];
 
     let currentFeature: string = "";
     let lastFeature: string = "R";
@@ -164,14 +168,18 @@ class Dungeon extends Level {
     let feature: number = randomInt(0, 100);
     let room: Room = this.makeRoom();
 
-    room.x = Math.floor((this.width / 2) - (room.w / 2));
-    room.y = Math.floor((this.height / 2) - (room.h / 2));
-    this.rooms[this.rooms.length] = room;
+    room.x = randomInt(0, Math.floor(this.width - room.w));
+    room.y = randomInt(0, Math.floor(this.height - room.h));
+    roomStack[roomStack.length] = room;
     this.addRoom(room);
+    this.rooms.push(room);
     gRooms++;
 
+    this.entrance = {x: room.x + Math.floor(room.w / 2), y: room.y + Math.floor(room.h / 2)};
+    this.addTile(this.entrance, 5);
+
     let p: {x: number, y: number, w: number};
-    while (this.rooms.length > 0 && gRooms < rooms) {
+    while (roomStack.length > 0 && gRooms < rooms) {
       if (feature > (65 + weight)) {
         currentFeature = "C";
       } else {
@@ -180,34 +188,37 @@ class Dungeon extends Level {
 
         do {
           if ( attempts > 5 || attempts === 0 ) {
-            if (this.rooms[this.rooms.length - 1].walls.length === 0)
-              this.rooms.pop();
-            if (this.rooms.length === 0) break;
-            p = this.rooms[this.rooms.length - 1].getRandomWall();
+            if (roomStack[roomStack.length - 1].walls.length === 0)
+              roomStack.pop();
+            if (roomStack.length === 0) break;
+            p = roomStack[roomStack.length - 1].getRandomWall();
+            lastFeature = roomStack[roomStack.length - 1].roomType;
           }
           room = this.makeRoom(p, currentFeature, currentFeature !== lastFeature);
 
           attempts++;
         } while (!this.scan(room, p.w, currentFeature !== lastFeature));
         attempts = 0;
-        if (this.rooms.length === 0) break;
+        if (roomStack.length === 0) break;
         if (currentFeature !== lastFeature)
-          this.addDoor(p);
+          this.addTile(p, 3); // Add Door
 
-        this.rooms[this.rooms.length] = room;
+        roomStack[roomStack.length] = room;
         this.addRoom(room);
 
         if (currentFeature === "C") {
           weight += 10;
         } else {
+          this.rooms.push(room);
           gRooms++;
           weight -= 10;
         }
-        lastFeature = currentFeature;
+        lastFeature = roomStack[roomStack.length - 1].roomType;
         currentFeature = "";
 
       feature = randomInt(0, 100);
     }
+
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
         if (this.cells[x][y].tileID === 2) {
