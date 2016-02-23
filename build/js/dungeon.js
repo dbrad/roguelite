@@ -3,20 +3,6 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-function randomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-function shuffle(array) {
-    var currentIndex = array.length, temporaryValue, randomIndex;
-    while (0 !== currentIndex) {
-        randomIndex = Math.floor(Math.random() * currentIndex);
-        currentIndex -= 1;
-        temporaryValue = array[currentIndex];
-        array[currentIndex] = array[randomIndex];
-        array[randomIndex] = temporaryValue;
-    }
-    return array;
-}
 var WALL;
 (function (WALL) {
     WALL[WALL["N"] = 0] = "N";
@@ -89,7 +75,9 @@ var Dungeon = (function (_super) {
             y -= 1;
         for (var x0 = x; !(x0 > (x + w)) && result; x0++) {
             for (var y0 = y; !(y0 > (y + h)) && result; y0++) {
-                result = result && (this.cells[x0] !== undefined) && (this.cells[x0][y0] !== undefined) && (this.cells[x0][y0].tileID === 0);
+                result = result && (this.cells[x0] !== undefined)
+                    && (this.cells[x0][y0] !== undefined)
+                    && (this.cells[x0][y0].tileID === 0);
             }
         }
         return result;
@@ -157,8 +145,8 @@ var Dungeon = (function (_super) {
         var attempts = 0;
         var feature = randomInt(0, 100);
         var room = this.makeRoom();
-        room.x = randomInt(0, Math.floor(this.width - room.w));
-        room.y = randomInt(0, Math.floor(this.height - room.h));
+        room.x = randomInt(1, Math.floor(this.width - room.w) - 1);
+        room.y = randomInt(1, Math.floor(this.height - room.h) - 1);
         roomStack[roomStack.length] = room;
         this.addRoom(room);
         this.rooms.push(room);
@@ -204,6 +192,8 @@ var Dungeon = (function (_super) {
             currentFeature = "";
             feature = randomInt(0, 100);
         }
+        var lastRoom = this.rooms[this.rooms.length - 1];
+        this.addTile({ x: lastRoom.x + Math.floor(lastRoom.w / 2), y: lastRoom.y + Math.floor(lastRoom.h / 2) }, 6);
         for (var x = 0; x < this.width; x++) {
             for (var y = 0; y < this.height; y++) {
                 if (this.cells[x][y].tileID === 2) {

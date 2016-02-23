@@ -18,9 +18,12 @@
     "files": [
         "./src/cave.ts",
         "./src/dungeon.ts",
+        "./src/ecs.ts",
         "./src/game_objs.ts",
         "./src/game.ts",
-        "./src/input.ts"
+        "./src/input.ts",
+        "./src/types.ts",
+        "./src/utility.ts"
     ],
     "atom": {
         "rewriteTsconfig": true

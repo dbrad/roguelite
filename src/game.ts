@@ -1,26 +1,26 @@
 /// <reference path="./input.ts"/>
+/// <reference path="./types.ts"/>
+/// <reference path="./ecs.ts"/>
 /// <reference path="./game_objs.ts"/>
 /// <reference path="./cave.ts"/>
 /// <reference path="./dungeon.ts"/>
 
-interface Context2D extends CanvasRenderingContext2D {
-    mozImageSmoothingEnabled?: boolean;
-    imageSmoothingEnabled?: boolean;
-    webkitImageSmoothingEnabled?: boolean;
-}
+
 class Game {
     private _loopHandle: number;
-    private ctx: Context2D;
-    private bufferCtx: Context2D;
+
     private screen: HTMLCanvasElement;
     private buffer: HTMLCanvasElement;
+
+    private ctx: Context2D;
+    private bufferCtx: Context2D;
 
     public level: Level;
 
     constructor(screen: HTMLCanvasElement) {
         console.log("Setting up screen");
 
-        /** Hook our game up to our canvas "Screen" */
+        // Hook our game up to our canvas "Screen"
         this.screen = screen;
         this.ctx = <Context2D>screen.getContext("2d");
         this.ctx.mozImageSmoothingEnabled = false;
@@ -37,18 +37,31 @@ class Game {
 
     init(): void {
         console.log("Initializing...");
+        // most of this will move to the world class
+        // will load a saved world or make a new world from main menu
         this.level = new Dungeon(160, 160, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
         this.level.floodDiscover(this.level.entrance.x, this.level.entrance.y);
         this.level.camera.xOffset = this.level.entrance.x - (this.level.camera.width / 2);
         this.level.camera.yOffset = this.level.entrance.y - (this.level.camera.height / 2);
-        this.level.snapCamera();
-        let player = new Entity();
-        player.addComponent(new IsPlayerCom());
-        player.addComponent(new TilePosCom());
+        this.level.snapCameraToLevel();
+        let player = new ECS.Entity();
+        player.addComponent(new ECS.Components.IsPlayer());
+        player.addComponent(new ECS.Components.TilePos());
 
-        (<TilePosCom>player.components["pos"]).x = this.level.entrance.x;
-        (<TilePosCom>player.components["pos"]).y = this.level.entrance.y;
+        player["pos"].value.x = this.level.entrance.x;
+        player["pos"].value.y = this.level.entrance.y;
         this.level.EntityList.push(player);
+
+        for (let i = 0; i < 20; i++){
+          let enemy = new ECS.Entity();
+          enemy.addComponent(new ECS.Components.IsEnemy());
+          enemy.addComponent(new ECS.Components.TilePos());
+          do {
+          enemy["pos"].value.x = randomInt(0, 159);
+          enemy["pos"].value.y = randomInt(0, 159);
+        } while (this.level.cells[enemy["pos"].value.x][enemy["pos"].value.y].tileID !== 2)
+          this.level.EntityList.push(enemy);
+        }
         this.state = "MainMenu";
     }
 
@@ -57,11 +70,11 @@ class Game {
     update(delta: number): void {
         switch (this.state) {
             case "MainMenu":
+                // this.mainmenu.update();
                 this.state = "Game";
                 break;
             case "Game":
                 // Pause delta handling
-
                 if (this.deltaPaused > 0) {
                     delta -= this.deltaPaused;
                     if (delta < 0) delta = 0;
@@ -86,31 +99,44 @@ class Game {
     draw(): void {
         switch (this.state) {
             case "MainMenu":
+                // this.mainmenu.draw();
                 break;
             case "Game":
                 if (this.clearScreen || this.level.redraw) {
                     this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
                     this.clearScreen = false;
                 }
+
+                /**
+                 * most likely create a world class
+                 * use a "this.world.draw(this.bufferctx);" instead of indivdual calls here.
+                 * this manager will likely keep a history of live levels for backtracking and such
+                 */
                 if (this.level.redraw) {
-                  // this.ctx.clearRect(0, 0, GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE);
+                  // draw (and maybe re-render) the level, move this to a world class?
                   this.level.draw(this.bufferCtx);
 
-                  this.bufferCtx.fillStyle = "#bbb";
+                  // place holder for textlog
+                  this.bufferCtx.fillStyle = "#000000";
                   this.bufferCtx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
 
-                  this.bufferCtx.fillStyle = "#ddd";
+                  // place holder for sidebar
+                  this.bufferCtx.fillStyle = "#000000";
                   this.bufferCtx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
-                  this.level.drawEntities(this.bufferCtx);
+
+                  // draw the minimap, also move this to a world class?
                   this.level.drawMiniMap(this.bufferCtx);
 
+                  // draw the entities, also move this to a world class?
+                  this.level.drawEntities(this.bufferCtx);
+
+                  // draw the offscreen canvas to the onscreen canvas
                   this.ctx.drawImage(
                     this.buffer,
                     0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT,
                     0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
                   this.level.redraw = false;
                 }
-                // draw
                 break;
             case "GamePause":
                 if (this.change) {

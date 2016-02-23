@@ -24,13 +24,23 @@ var Game = (function () {
         this.level.floodDiscover(this.level.entrance.x, this.level.entrance.y);
         this.level.camera.xOffset = this.level.entrance.x - (this.level.camera.width / 2);
         this.level.camera.yOffset = this.level.entrance.y - (this.level.camera.height / 2);
-        this.level.snapCamera();
-        var player = new Entity();
-        player.addComponent(new IsPlayerCom());
-        player.addComponent(new TilePosCom());
-        player.components["pos"].x = this.level.entrance.x;
-        player.components["pos"].y = this.level.entrance.y;
+        this.level.snapCameraToLevel();
+        var player = new ECS.Entity();
+        player.addComponent(new ECS.Components.IsPlayer());
+        player.addComponent(new ECS.Components.TilePos());
+        player["pos"].value.x = this.level.entrance.x;
+        player["pos"].value.y = this.level.entrance.y;
         this.level.EntityList.push(player);
+        for (var i = 0; i < 20; i++) {
+            var enemy = new ECS.Entity();
+            enemy.addComponent(new ECS.Components.IsEnemy());
+            enemy.addComponent(new ECS.Components.TilePos());
+            do {
+                enemy["pos"].value.x = randomInt(0, 159);
+                enemy["pos"].value.y = randomInt(0, 159);
+            } while (this.level.cells[enemy["pos"].value.x][enemy["pos"].value.y].tileID !== 2);
+            this.level.EntityList.push(enemy);
+        }
         this.state = "MainMenu";
     };
     Game.prototype.update = function (delta) {
@@ -67,12 +77,12 @@ var Game = (function () {
                 }
                 if (this.level.redraw) {
                     this.level.draw(this.bufferCtx);
-                    this.bufferCtx.fillStyle = "#bbb";
+                    this.bufferCtx.fillStyle = "#000000";
                     this.bufferCtx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
-                    this.bufferCtx.fillStyle = "#ddd";
+                    this.bufferCtx.fillStyle = "#000000";
                     this.bufferCtx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
-                    this.level.drawEntities(this.bufferCtx);
                     this.level.drawMiniMap(this.bufferCtx);
+                    this.level.drawEntities(this.bufferCtx);
                     this.ctx.drawImage(this.buffer, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
                     this.level.redraw = false;
                 }

@@ -1,26 +1,6 @@
 /// <reference path="./game_objs.ts"/>
+/// <reference path="./utility.ts"/>
 
-function randomInt(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-function shuffle(array: any[]) {
-  let currentIndex: number = array.length, temporaryValue: number, randomIndex: number;
-
-  // While there remain elements to shuffle...
-  while (0 !== currentIndex) {
-
-    // Pick a remaining element...
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex -= 1;
-
-    // And swap it with the current element.
-    temporaryValue = array[currentIndex];
-    array[currentIndex] = array[randomIndex];
-    array[randomIndex] = temporaryValue;
-  }
-
-  return array;
-}
 enum WALL { N, E, S, W };
 class Room {
   x: number;
@@ -94,7 +74,9 @@ class Dungeon extends Level {
     if (wall === WALL.W || wall === WALL.E) y -= 1;
     for (let x0: number = x; !(x0 > (x + w)) && result; x0++) {
       for (let y0: number = y; !(y0 > (y + h)) && result; y0++) {
-        result = result && (this.cells[x0] !== undefined ) && (this.cells[x0][y0] !== undefined) && (this.cells[x0][y0].tileID === 0);
+        result = result && (this.cells[x0] !== undefined )
+          && (this.cells[x0][y0] !== undefined)
+          && (this.cells[x0][y0].tileID === 0);
       }
     }
     return result;
@@ -168,8 +150,8 @@ class Dungeon extends Level {
     let feature: number = randomInt(0, 100);
     let room: Room = this.makeRoom();
 
-    room.x = randomInt(0, Math.floor(this.width - room.w));
-    room.y = randomInt(0, Math.floor(this.height - room.h));
+    room.x = randomInt(1, Math.floor(this.width - room.w) - 1);
+    room.y = randomInt(1, Math.floor(this.height - room.h) - 1);
     roomStack[roomStack.length] = room;
     this.addRoom(room);
     this.rooms.push(room);
@@ -200,6 +182,7 @@ class Dungeon extends Level {
         } while (!this.scan(room, p.w, currentFeature !== lastFeature));
         attempts = 0;
         if (roomStack.length === 0) break;
+
         if (currentFeature !== lastFeature)
           this.addTile(p, 3); // Add Door
 
@@ -218,7 +201,8 @@ class Dungeon extends Level {
 
       feature = randomInt(0, 100);
     }
-
+    let lastRoom = this.rooms[this.rooms.length - 1];
+    this.addTile({x: lastRoom.x + Math.floor(lastRoom.w / 2), y: lastRoom.y + Math.floor(lastRoom.h / 2)}, 6);
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
         if (this.cells[x][y].tileID === 2) {

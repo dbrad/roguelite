@@ -1,8 +1,79 @@
+function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function shuffle(array) {
+    var currentIndex = array.length, temporaryValue, randomIndex;
+    while (0 !== currentIndex) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex -= 1;
+        temporaryValue = array[currentIndex];
+        array[currentIndex] = array[randomIndex];
+        array[randomIndex] = temporaryValue;
+    }
+    return array;
+}
+
+
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+var ECS;
+(function (ECS) {
+    var Entity = (function () {
+        function Entity() {
+            this.components = {};
+            if (!Entity.autoID)
+                Entity.autoID = 0;
+            this.id = Entity.autoID++;
+        }
+        Entity.prototype.addComponent = function (component) {
+            this.components[component.name] = component;
+            this[component.name] = component;
+        };
+        return Entity;
+    }());
+    ECS.Entity = Entity;
+    var Components;
+    (function (Components) {
+        var Component = (function () {
+            function Component(name) {
+                this.name = name;
+            }
+            return Component;
+        }());
+        Components.Component = Component;
+        var IsPlayer = (function (_super) {
+            __extends(IsPlayer, _super);
+            function IsPlayer() {
+                _super.call(this, "player");
+                this.value = true;
+            }
+            return IsPlayer;
+        }(Component));
+        Components.IsPlayer = IsPlayer;
+        var IsEnemy = (function (_super) {
+            __extends(IsEnemy, _super);
+            function IsEnemy() {
+                _super.call(this, "enemy");
+                this.value = true;
+            }
+            return IsEnemy;
+        }(Component));
+        Components.IsEnemy = IsEnemy;
+        var TilePos = (function (_super) {
+            __extends(TilePos, _super);
+            function TilePos() {
+                _super.call(this, "pos");
+                this.value = { x: 0, y: 0 };
+            }
+            return TilePos;
+        }(Component));
+        Components.TilePos = TilePos;
+    })(Components = ECS.Components || (ECS.Components = {}));
+})(ECS || (ECS = {}));
+
 var GAMEINFO;
 (function (GAMEINFO) {
     GAMEINFO.TILESIZE = 16;
@@ -22,42 +93,6 @@ var TileSet = (function () {
     }
     return TileSet;
 }());
-var Entity = (function () {
-    function Entity() {
-        this.components = {};
-        if (!Entity.autoID)
-            Entity.autoID = 0;
-        this.id = Entity.autoID++;
-    }
-    Entity.prototype.addComponent = function (component) {
-        this.components[component.name] = component;
-        this[component.name] = component;
-    };
-    return Entity;
-}());
-var Component = (function () {
-    function Component(name) {
-        this.name = name;
-    }
-    return Component;
-}());
-var IsPlayerCom = (function (_super) {
-    __extends(IsPlayerCom, _super);
-    function IsPlayerCom() {
-        _super.call(this, "isPlayer");
-        this.value = true;
-    }
-    return IsPlayerCom;
-}(Component));
-var TilePosCom = (function (_super) {
-    __extends(TilePosCom, _super);
-    function TilePosCom() {
-        _super.call(this, "pos");
-        this.x = 0;
-        this.y = 0;
-    }
-    return TilePosCom;
-}(Component));
 var Item = (function () {
     function Item() {
     }
@@ -101,11 +136,15 @@ var Level = (function () {
         this.MiniMap = document.createElement("canvas");
         this.MiniMap.width = width;
         this.MiniMap.height = height;
+        this.MiniMap.getContext("2d").mozImageSmoothingEnabled = false;
+        this.MiniMap.getContext("2d").imageSmoothingEnabled = false;
         this.renderCache = document.createElement("canvas");
         this.renderCache.width = (width * GAMEINFO.TILESIZE);
         this.renderCache.height = (height * GAMEINFO.TILESIZE);
+        this.renderCache.getContext("2d").mozImageSmoothingEnabled = false;
+        this.renderCache.getContext("2d").imageSmoothingEnabled = false;
     }
-    Level.prototype.snapCamera = function () {
+    Level.prototype.snapCameraToLevel = function () {
         if (this.camera.xOffset <= 0)
             this.camera.xOffset = 0;
         if (this.camera.xOffset + this.camera.width >= this.width)
@@ -181,8 +220,6 @@ var Level = (function () {
             }
         }
     };
-    Level.prototype.floodVision = function () {
-    };
     Level.prototype.floodFill = function (x, y, target, fill) {
         var maxX = this.width - 1;
         var maxY = this.height - 1;
@@ -242,8 +279,8 @@ var Level = (function () {
     Level.prototype.update = function () {
         var step = 1;
         var player = this.EntityList[0];
-        var playerPos = player["pos"];
-        if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
+        var playerPos = player["pos"].value;
+        if (Input.KB.wasDown(Input.KB.KEY.LEFT)) {
             if (this.cells[playerPos.x - 1][playerPos.y].tileID !== 4) {
                 playerPos.x--;
                 if (playerPos.x < this.camera.xOffset + this.camThresh) {
@@ -254,7 +291,7 @@ var Level = (function () {
             }
             this.redraw = true;
         }
-        else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
+        else if (Input.KB.wasDown(Input.KB.KEY.RIGHT)) {
             if (this.cells[playerPos.x + 1][playerPos.y].tileID !== 4) {
                 playerPos.x++;
                 if (playerPos.x >= this.camera.xOffset + this.camera.width - this.camThresh) {
@@ -265,7 +302,7 @@ var Level = (function () {
             }
             this.redraw = true;
         }
-        if (Input.KB.isDown(Input.KB.KEY.UP)) {
+        if (Input.KB.wasDown(Input.KB.KEY.UP)) {
             if (this.cells[playerPos.x][playerPos.y - 1].tileID !== 4) {
                 playerPos.y--;
                 if (playerPos.y < this.camera.yOffset + (this.camThresh / 2)) {
@@ -276,7 +313,7 @@ var Level = (function () {
             }
             this.redraw = true;
         }
-        else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
+        else if (Input.KB.wasDown(Input.KB.KEY.DOWN)) {
             if (this.cells[playerPos.x][playerPos.y + 1].tileID !== 4) {
                 playerPos.y++;
                 if (playerPos.y >= this.camera.yOffset + this.camera.height - (this.camThresh / 2)) {
@@ -292,51 +329,55 @@ var Level = (function () {
             this.render_m = this.render_mm = true;
         }
     };
-    Level.prototype.render = function () {
-        var ctx = this.renderCache.getContext("2d");
+    Level.prototype.getTempColor = function (tileID) {
+        var result = "ff00ff";
+        switch (tileID) {
+            case 0:
+                result = "#111111";
+                break;
+            case 1:
+                result = "#aaaaaa";
+                break;
+            case 2:
+                result = "#222222";
+                break;
+            case 3:
+                result = "#ffffff";
+                break;
+            case 4:
+                result = "#999999";
+                break;
+            case 5:
+                result = "#00ff00";
+                break;
+            case 6:
+                result = "#0066FF";
+                break;
+            default:
+                result = "#ff00ff";
+                break;
+        }
+        return result;
+    };
+    Level.prototype.render = function (ctx, tSize) {
         for (var tx = 0, x = 0; tx < this.width; tx++) {
             for (var ty = 0, y = 0; ty < this.height; ty++) {
                 if (!this.cells[tx] || !this.cells[tx][ty]) {
-                    ctx.fillStyle = "#000";
-                    ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
-                    y++;
-                    continue;
-                }
-                var tCell = this.cells[tx][ty];
-                if (!tCell.discovered) {
-                    ctx.fillStyle = "black";
-                    ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
-                }
-                else if (!tCell.visable) {
-                    ctx.fillStyle = "#222";
-                    ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
+                    ctx.fillStyle = "#111111";
                 }
                 else {
-                    switch (tCell.tileID) {
-                        case 0:
-                            ctx.fillStyle = "#000";
-                            break;
-                        case 1:
-                            ctx.fillStyle = "#AAA";
-                            break;
-                        case 2:
-                            ctx.fillStyle = "#999999";
-                            break;
-                        case 3:
-                            ctx.fillStyle = "#FFF";
-                            break;
-                        case 4:
-                            ctx.fillStyle = "#222";
-                            break;
-                        case 5:
-                            ctx.fillStyle = "#0F0";
-                            break;
-                        default:
-                            ctx.fillStyle = "#FFF";
-                            break;
+                    var tCell = this.cells[tx][ty];
+                    if (!tCell.discovered) {
+                        ctx.fillStyle = "#111111";
                     }
-                    ctx.fillRect(x * GAMEINFO.TILESIZE, y * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
+                    else if (!tCell.visable) {
+                        ctx.fillStyle = "#222222";
+                    }
+                    else {
+                        ctx.fillStyle = this.getTempColor(tCell.tileID);
+                    }
                 }
+                ctx.fillRect(x * tSize, y * tSize, tSize, tSize);
                 y++;
             }
             x++;
@@ -344,83 +385,69 @@ var Level = (function () {
     };
     Level.prototype.draw = function (ctx) {
         if (this.render_m) {
-            this.render();
+            this.render(this.renderCache.getContext("2d"), GAMEINFO.TILESIZE);
             this.render_m = false;
         }
         ctx.drawImage(this.renderCache, this.camera.xOffset * GAMEINFO.TILESIZE, this.camera.yOffset * GAMEINFO.TILESIZE, GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, 0, 0, GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE);
-        ctx.fillText("Camera x: " + this.camera.xOffset * GAMEINFO.TILESIZE, 10, 12);
-        ctx.fillText("Camera y: " + this.camera.yOffset * GAMEINFO.TILESIZE, 10, 24);
-    };
-    Level.prototype.renderMiniMap = function () {
-        var ctx = this.MiniMap.getContext("2d");
-        for (var tx = 0, x = 0; tx < this.width; tx++) {
-            for (var ty = 0, y = 0; ty < this.height; ty++) {
-                if (!this.cells[tx] || !this.cells[tx][ty]) {
-                    ctx.fillStyle = "#000";
-                    ctx.fillRect(x, y, 1, 1);
-                    y++;
-                    continue;
-                }
-                var tCell = this.cells[tx][ty];
-                if (!tCell.discovered) {
-                    ctx.fillStyle = "#000";
-                    ctx.fillRect(x, y, 1, 1);
-                }
-                else if (!tCell.visable) {
-                    ctx.fillStyle = "#222";
-                    ctx.fillRect(x, y, 1, 1);
-                }
-                else {
-                    switch (tCell.tileID) {
-                        case 0:
-                            ctx.fillStyle = "#000";
-                            break;
-                        case 1:
-                            ctx.fillStyle = "#AAA";
-                            break;
-                        case 2:
-                            ctx.fillStyle = "#999999";
-                            break;
-                        case 3:
-                            ctx.fillStyle = "#FFF";
-                            break;
-                        case 4:
-                            ctx.fillStyle = "#222";
-                            break;
-                        case 5:
-                            ctx.fillStyle = "#0F0";
-                            break;
-                        default:
-                            ctx.fillStyle = "#FFF";
-                            break;
-                    }
-                    ctx.fillRect(x, y, 1, 1);
-                }
-                y++;
-            }
-            x++;
-        }
     };
     Level.prototype.drawMiniMap = function (ctx) {
         if (this.render_mm) {
-            this.renderMiniMap();
+            this.render(this.MiniMap.getContext("2d"), 1);
             this.render_mm = false;
         }
-        ctx.drawImage(this.MiniMap, 0, 0, this.MiniMap.width, this.MiniMap.height, GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width, GAMEINFO.GAME_PIXEL_HEIGHT - this.MiniMap.height, this.MiniMap.width, this.MiniMap.height);
+        ctx.drawImage(this.MiniMap, 0, 0, this.MiniMap.width, this.MiniMap.height, GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width, 0, this.MiniMap.width, this.MiniMap.height);
         ctx.strokeStyle = "#FFF";
         ctx.lineWidth = 2;
-        ctx.strokeRect(GAMEINFO.GAME_PIXEL_WIDTH - this.width + this.camera.xOffset, GAMEINFO.GAME_PIXEL_HEIGHT - this.height + this.camera.yOffset, this.camera.width, this.camera.height);
+        ctx.strokeRect(GAMEINFO.GAME_PIXEL_WIDTH - this.width + this.camera.xOffset, this.camera.yOffset, this.camera.width, this.camera.height);
     };
     Level.prototype.drawEntities = function (ctx) {
-        ctx.fillStyle = "#F00";
+        var player;
+        var playerPos;
+        var dx, dy;
         for (var _i = 0, _a = this.EntityList; _i < _a.length; _i++) {
             var e = _a[_i];
-            var t = (e.components["pos"]);
-            if ((t.x * GAMEINFO.TILESIZE) + GAMEINFO.TILESIZE > this.camera.xOffset * GAMEINFO.TILESIZE
-                && (t.x * GAMEINFO.TILESIZE) < (this.camera.xOffset + this.camera.width) * GAMEINFO.TILESIZE
-                && (t.y * GAMEINFO.TILESIZE) + GAMEINFO.TILESIZE > this.camera.yOffset * GAMEINFO.TILESIZE
-                && (t.y * GAMEINFO.TILESIZE) < (this.camera.yOffset + this.camera.height) * GAMEINFO.TILESIZE) {
+            if (e["player"]) {
+                player = e;
+                playerPos = player["pos"].value;
+            }
+        }
+        var ux, uy, lx, ly;
+        var defaultDist = 4;
+        ux = uy = lx = ly = defaultDist;
+        for (var x0 = defaultDist; x0 >= 0; x0--) {
+            for (var y0 = defaultDist; y0 >= 0; y0--) {
+                if ((this.cells[playerPos.x + x0] && this.cells[playerPos.x + x0][playerPos.y + y0] && this.cells[playerPos.x + x0][playerPos.y + y0].tileID === 4)
+                    || (this.cells[playerPos.x - x0] && this.cells[playerPos.x - x0][playerPos.y + y0] && this.cells[playerPos.x - x0][playerPos.y + y0].tileID === 4)
+                    || (this.cells[playerPos.x + x0] && this.cells[playerPos.x + x0][playerPos.y - y0] && this.cells[playerPos.x + x0][playerPos.y - y0].tileID === 4)
+                    || (this.cells[playerPos.x - x0] && this.cells[playerPos.x - x0][playerPos.y - y0] && this.cells[playerPos.x - x0][playerPos.y - y0].tileID === 4)) {
+                    for (var torchDist = 1; torchDist < defaultDist; torchDist++) {
+                        if (x0 <= torchDist && y0 <= torchDist && torchDist < ux) {
+                            ux = uy = lx = ly = torchDist;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        ctx.globalAlpha = 0.1;
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect((player["pos"].value.x - this.camera.xOffset - ux) * GAMEINFO.TILESIZE, (player["pos"].value.y - this.camera.yOffset - uy) * GAMEINFO.TILESIZE, (1 + ux + lx) * GAMEINFO.TILESIZE, (1 + uy + ly) * GAMEINFO.TILESIZE);
+        ctx.globalAlpha = 1.0;
+        for (var _b = 0, _c = this.EntityList; _b < _c.length; _b++) {
+            var e = _c[_b];
+            dx = dy = 0;
+            if (e["player"]) {
+                ctx.fillStyle = "#FF6600";
+            }
+            else {
+                dx = player["pos"].value.x - e["pos"].value.x;
+                dy = player["pos"].value.y - e["pos"].value.y;
+                ctx.fillStyle = "#FF0000";
+            }
+            var t = e.components["pos"].value;
+            if (e["player"] || (dx >= -ux && dx <= lx && dy >= -uy && dy <= ly)) {
                 ctx.fillRect((t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE), (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE), GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
+                ctx.fillRect(t.x + (GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width), t.y, 1, 1);
             }
         }
     };
@@ -537,20 +564,6 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-function randomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-function shuffle(array) {
-    var currentIndex = array.length, temporaryValue, randomIndex;
-    while (0 !== currentIndex) {
-        randomIndex = Math.floor(Math.random() * currentIndex);
-        currentIndex -= 1;
-        temporaryValue = array[currentIndex];
-        array[currentIndex] = array[randomIndex];
-        array[randomIndex] = temporaryValue;
-    }
-    return array;
-}
 var WALL;
 (function (WALL) {
     WALL[WALL["N"] = 0] = "N";
@@ -623,7 +636,9 @@ var Dungeon = (function (_super) {
             y -= 1;
         for (var x0 = x; !(x0 > (x + w)) && result; x0++) {
             for (var y0 = y; !(y0 > (y + h)) && result; y0++) {
-                result = result && (this.cells[x0] !== undefined) && (this.cells[x0][y0] !== undefined) && (this.cells[x0][y0].tileID === 0);
+                result = result && (this.cells[x0] !== undefined)
+                    && (this.cells[x0][y0] !== undefined)
+                    && (this.cells[x0][y0].tileID === 0);
             }
         }
         return result;
@@ -691,8 +706,8 @@ var Dungeon = (function (_super) {
         var attempts = 0;
         var feature = randomInt(0, 100);
         var room = this.makeRoom();
-        room.x = randomInt(0, Math.floor(this.width - room.w));
-        room.y = randomInt(0, Math.floor(this.height - room.h));
+        room.x = randomInt(1, Math.floor(this.width - room.w) - 1);
+        room.y = randomInt(1, Math.floor(this.height - room.h) - 1);
         roomStack[roomStack.length] = room;
         this.addRoom(room);
         this.rooms.push(room);
@@ -738,6 +753,8 @@ var Dungeon = (function (_super) {
             currentFeature = "";
             feature = randomInt(0, 100);
         }
+        var lastRoom = this.rooms[this.rooms.length - 1];
+        this.addTile({ x: lastRoom.x + Math.floor(lastRoom.w / 2), y: lastRoom.y + Math.floor(lastRoom.h / 2) }, 6);
         for (var x = 0; x < this.width; x++) {
             for (var y = 0; y < this.height; y++) {
                 if (this.cells[x][y].tileID === 2) {
@@ -831,13 +848,23 @@ var Game = (function () {
         this.level.floodDiscover(this.level.entrance.x, this.level.entrance.y);
         this.level.camera.xOffset = this.level.entrance.x - (this.level.camera.width / 2);
         this.level.camera.yOffset = this.level.entrance.y - (this.level.camera.height / 2);
-        this.level.snapCamera();
-        var player = new Entity();
-        player.addComponent(new IsPlayerCom());
-        player.addComponent(new TilePosCom());
-        player.components["pos"].x = this.level.entrance.x;
-        player.components["pos"].y = this.level.entrance.y;
+        this.level.snapCameraToLevel();
+        var player = new ECS.Entity();
+        player.addComponent(new ECS.Components.IsPlayer());
+        player.addComponent(new ECS.Components.TilePos());
+        player["pos"].value.x = this.level.entrance.x;
+        player["pos"].value.y = this.level.entrance.y;
         this.level.EntityList.push(player);
+        for (var i = 0; i < 20; i++) {
+            var enemy = new ECS.Entity();
+            enemy.addComponent(new ECS.Components.IsEnemy());
+            enemy.addComponent(new ECS.Components.TilePos());
+            do {
+                enemy["pos"].value.x = randomInt(0, 159);
+                enemy["pos"].value.y = randomInt(0, 159);
+            } while (this.level.cells[enemy["pos"].value.x][enemy["pos"].value.y].tileID !== 2);
+            this.level.EntityList.push(enemy);
+        }
         this.state = "MainMenu";
     };
     Game.prototype.update = function (delta) {
@@ -874,12 +901,12 @@ var Game = (function () {
                 }
                 if (this.level.redraw) {
                     this.level.draw(this.bufferCtx);
-                    this.bufferCtx.fillStyle = "#bbb";
+                    this.bufferCtx.fillStyle = "#000000";
                     this.bufferCtx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
-                    this.bufferCtx.fillStyle = "#ddd";
+                    this.bufferCtx.fillStyle = "#000000";
                     this.bufferCtx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
-                    this.level.drawEntities(this.bufferCtx);
                     this.level.drawMiniMap(this.bufferCtx);
+                    this.level.drawEntities(this.bufferCtx);
                     this.ctx.drawImage(this.buffer, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
                     this.level.redraw = false;
                 }
