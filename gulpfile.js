@@ -6,7 +6,29 @@ var csso = require('gulp-csso');
 var concat = require('gulp-concat');
 
 gulp.task('concat', function() {
-  return gulp.src(['build/js/utility.js', 'build/js/types.js', 'build/js/ecs.js', 'build/js/game_objs.js','build/js/cave.js', 'build/js/dungeon.js','build/js/input.js','build/js/game.js'])
+	var fileList = [
+		"build/js/system/game_config.js",
+		"build/js/system/input.js",
+		"build/js/system/camera.js",
+
+		"build/js/types/types.js",
+
+		"build/js/util/utility.js",
+
+		"build/js/ecs/components.js",
+		"build/js/ecs/entity.js",
+		"build/js/ecs/systems.js",
+
+		"build/js/world/game_objs.js",
+		"build/js/world/cell.js",
+		"build/js/world/level.js",
+		"build/js/world/cave.js",
+		"build/js/world/room.js",
+		"build/js/world/dungeon.js",
+
+		"build/js/system/game.js"
+	];
+  return gulp.src(fileList)
     .pipe(concat('main.js'))
     .pipe(gulp.dest('build'));
 });
@@ -38,7 +60,7 @@ gulp.task('zip', [ 'htmlmin', 'minify', 'cssmin' ], function() {
 gulp.task("watch", function() {
   gulp.watch('build/*.css', ['cssmin', 'zip']);
   gulp.watch('build/*.html', ['htmlmin', 'zip']);
-  gulp.watch('build/js/*.js', ['concat', 'minify', 'zip']);
+  gulp.watch('build/js/**/*.js', ['concat', 'minify', 'zip']);
 });
 
 

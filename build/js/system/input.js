@@ -34,8 +34,9 @@ var Input;
         function keyDown(event) {
             var keyCode = event.which;
             _isDown[keyCode] = true;
-            if (_isUp[keyCode])
+            if (_isUp[keyCode]) {
                 _wasDown[keyCode] = true;
+            }
             _isUp[keyCode] = false;
         }
         KB.keyDown = keyDown;

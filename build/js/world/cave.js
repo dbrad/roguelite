@@ -9,8 +9,9 @@ var Cave = (function (_super) {
         _super.call(this, width, height, camera);
         for (var x = 0; x < this.width; x++) {
             for (var y = 0; y < this.height; y++) {
-                if (this.cells[x] === undefined)
+                if (this.cells[x] === undefined) {
                     this.cells[x] = [];
+                }
                 if ((Math.random() * 100) < 50 || (x === 0 || x === (this.width - 1) || y === 0 || y === (this.height - 1))) {
                     this.cells[x][y] = new Cell(0);
                 }
@@ -63,11 +64,13 @@ var Cave = (function (_super) {
     Cave.prototype.getLiveNeighbors = function (x, y) {
         var count = 0;
         for (var nx = x - 1; nx <= x + 1; nx++) {
-            if (nx < 0 || nx > this.width)
+            if (nx < 0 || nx > this.width) {
                 continue;
+            }
             for (var ny = y - 1; ny <= y + 1; ny++) {
-                if (ny < 0 || ny > this.height)
+                if (ny < 0 || ny > this.height) {
                     continue;
+                }
                 if (!(nx === x && ny === y)) {
                     count += this.cells[nx][ny].tileID;
                 }

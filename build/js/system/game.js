@@ -51,11 +51,12 @@ var Game = (function () {
             case "Game":
                 if (this.deltaPaused > 0) {
                     delta -= this.deltaPaused;
-                    if (delta < 0)
+                    if (delta < 0) {
                         delta = 0;
+                    }
                     this.deltaPaused = 0;
                 }
-                this.level.update();
+                this.level.update(delta);
                 break;
             case "GamePause":
                 break;

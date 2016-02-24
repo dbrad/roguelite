@@ -1,57 +1,10 @@
-var GAMEINFO;
-(function (GAMEINFO) {
-    GAMEINFO.TILESIZE = 16;
-    GAMEINFO.GAME_PIXEL_WIDTH = 800;
-    GAMEINFO.GAME_PIXEL_HEIGHT = 448;
-    GAMEINFO.GAME_TILE_WIDTH = GAMEINFO.GAME_PIXEL_WIDTH / GAMEINFO.TILESIZE;
-    GAMEINFO.GAME_TILE_HEIGHT = GAMEINFO.GAME_PIXEL_HEIGHT / GAMEINFO.TILESIZE;
-    GAMEINFO.TEXTLOG_TILE_HEIGHT = 6;
-    GAMEINFO.GAMESCREEN_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH * .8;
-    GAMEINFO.GAMESCREEN_TILE_HEIGHT = GAMEINFO.GAME_TILE_HEIGHT - GAMEINFO.TEXTLOG_TILE_HEIGHT;
-    GAMEINFO.SIDEBAR_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH - GAMEINFO.GAMESCREEN_TILE_WIDTH;
-    GAMEINFO.SIDEBAR_TILE_HEIGHT = GAMEINFO.GAME_TILE_HEIGHT;
-    GAMEINFO.TEXTLOG_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH - GAMEINFO.SIDEBAR_TILE_WIDTH;
-})(GAMEINFO || (GAMEINFO = {}));
-var TileSet = (function () {
-    function TileSet() {
-    }
-    return TileSet;
-}());
-var Item = (function () {
-    function Item() {
-    }
-    return Item;
-}());
-var Cell = (function () {
-    function Cell(tileID, itemIDs, entityID) {
-        if (tileID === void 0) { tileID = 0; }
-        if (itemIDs === void 0) { itemIDs = []; }
-        if (entityID === void 0) { entityID = null; }
-        this.tileID = tileID;
-        this.entityID = entityID;
-        this.itemIDs = itemIDs;
-        this.visable = true;
-        this.discovered = false;
-    }
-    return Cell;
-}());
-var Camera = (function () {
-    function Camera(width, height, xOffset, yOffset) {
-        if (xOffset === void 0) { xOffset = 0; }
-        if (yOffset === void 0) { yOffset = 0; }
-        this.width = width;
-        this.height = height;
-        this.xOffset = xOffset;
-        this.yOffset = yOffset;
-    }
-    return Camera;
-}());
 var Level = (function () {
     function Level(width, height, camera) {
         this.redraw = true;
         this.render_m = true;
         this.render_mm = true;
         this.camThresh = 12;
+        this.timer = 0;
         this.cells = [];
         this.width = width;
         this.height = height;
@@ -69,14 +22,18 @@ var Level = (function () {
         this.renderCache.getContext("2d").imageSmoothingEnabled = false;
     }
     Level.prototype.snapCameraToLevel = function () {
-        if (this.camera.xOffset <= 0)
+        if (this.camera.xOffset <= 0) {
             this.camera.xOffset = 0;
-        if (this.camera.xOffset + this.camera.width >= this.width)
+        }
+        if (this.camera.xOffset + this.camera.width >= this.width) {
             this.camera.xOffset = (this.width - this.camera.width);
-        if (this.camera.yOffset <= 0)
+        }
+        if (this.camera.yOffset <= 0) {
             this.camera.yOffset = 0;
-        if (this.camera.yOffset + this.camera.height >= this.height)
+        }
+        if (this.camera.yOffset + this.camera.height >= this.height) {
             this.camera.yOffset = (this.height - this.camera.height);
+        }
     };
     Level.prototype.partOfRoom = function (cell) {
         return (cell.tileID === 2);
@@ -86,46 +43,52 @@ var Level = (function () {
         var maxY = this.height - 1;
         var stack = [];
         var index = 0;
-        if (!stack[index])
+        if (!stack[index]) {
             stack[index] = { x: 0, y: 0 };
+        }
         stack[0].x = x;
         stack[0].y = y;
         this.cells[x][y].discovered = true;
         while (index >= 0) {
-            if (!stack[index])
+            if (!stack[index]) {
                 stack[index] = { x: 0, y: 0 };
+            }
             x = stack[index].x;
             y = stack[index].y;
             index--;
             if ((x > 0) && this.partOfRoom(this.cells[x - 1][y]) && !this.cells[x - 1][y].discovered) {
                 this.cells[x - 1][y].discovered = true;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x - 1;
                 stack[index].y = y;
             }
             if ((x < maxX) && this.partOfRoom(this.cells[x + 1][y]) && !this.cells[x + 1][y].discovered) {
                 this.cells[x + 1][y].discovered = true;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x + 1;
                 stack[index].y = y;
             }
             if ((y > 0) && this.partOfRoom(this.cells[x][y - 1]) && !this.cells[x][y - 1].discovered) {
                 this.cells[x][y - 1].discovered = true;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x;
                 stack[index].y = y - 1;
             }
             if ((y < maxY) && this.partOfRoom(this.cells[x][y + 1]) && !this.cells[x][y + 1].discovered) {
                 this.cells[x][y + 1].discovered = true;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x;
                 stack[index].y = y + 1;
             }
@@ -149,101 +112,112 @@ var Level = (function () {
         var maxY = this.height - 1;
         var stack = [];
         var index = 0;
-        if (!stack[index])
+        if (!stack[index]) {
             stack[index] = { x: 0, y: 0 };
+        }
         stack[0].x = x;
         stack[0].y = y;
         this.cells[x][y].tileID = fill;
         while (index >= 0) {
-            if (!stack[index])
+            if (!stack[index]) {
                 stack[index] = { x: 0, y: 0 };
+            }
             x = stack[index].x;
             y = stack[index].y;
             index--;
             if ((x > 0) && (this.cells[x - 1][y].tileID === target)) {
                 this.cells[x - 1][y].tileID = fill;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x - 1;
                 stack[index].y = y;
             }
             if ((x < maxX) && (this.cells[x + 1][y].tileID === target)) {
                 this.cells[x + 1][y].tileID = fill;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x + 1;
                 stack[index].y = y;
             }
             if ((y > 0) && (this.cells[x][y - 1].tileID === target)) {
                 this.cells[x][y - 1].tileID = fill;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x;
                 stack[index].y = y - 1;
             }
             if ((y < maxY) && (this.cells[x][y + 1].tileID === target)) {
                 this.cells[x][y + 1].tileID = fill;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x;
                 stack[index].y = y + 1;
             }
         }
     };
-    Level.prototype.getWidth = function () {
-        return this.width;
-    };
-    Level.prototype.getHeight = function () {
-        return this.height;
-    };
-    Level.prototype.update = function () {
+    Level.prototype.update = function (delta) {
+        this.timer += delta;
+        if (this.timer < 75)
+            return;
         var step = 1;
         var player = this.EntityList[0];
         var playerPos = player["pos"].value;
-        if (Input.KB.wasDown(Input.KB.KEY.LEFT)) {
+        if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
+            this.timer = 0;
             if (this.cells[playerPos.x - 1][playerPos.y].tileID !== 4) {
                 playerPos.x--;
                 if (playerPos.x < this.camera.xOffset + this.camThresh) {
                     this.camera.xOffset -= step;
-                    if (this.camera.xOffset <= 0)
+                    if (this.camera.xOffset <= 0) {
                         this.camera.xOffset = 0;
+                    }
                 }
             }
             this.redraw = true;
         }
-        else if (Input.KB.wasDown(Input.KB.KEY.RIGHT)) {
+        else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
+            this.timer = 0;
             if (this.cells[playerPos.x + 1][playerPos.y].tileID !== 4) {
                 playerPos.x++;
                 if (playerPos.x >= this.camera.xOffset + this.camera.width - this.camThresh) {
                     this.camera.xOffset += step;
-                    if (this.camera.xOffset + this.camera.width >= this.width)
+                    if (this.camera.xOffset + this.camera.width >= this.width) {
                         this.camera.xOffset = (this.width - this.camera.width);
+                    }
                 }
             }
             this.redraw = true;
         }
-        if (Input.KB.wasDown(Input.KB.KEY.UP)) {
+        if (Input.KB.isDown(Input.KB.KEY.UP)) {
+            this.timer = 0;
             if (this.cells[playerPos.x][playerPos.y - 1].tileID !== 4) {
                 playerPos.y--;
-                if (playerPos.y < this.camera.yOffset + (this.camThresh / 2)) {
+                if (playerPos.y < this.camera.yOffset + (this.camThresh - 3)) {
                     this.camera.yOffset -= step;
-                    if (this.camera.yOffset <= 0)
+                    if (this.camera.yOffset <= 0) {
                         this.camera.yOffset = 0;
+                    }
                 }
             }
             this.redraw = true;
         }
-        else if (Input.KB.wasDown(Input.KB.KEY.DOWN)) {
+        else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
+            this.timer = 0;
             if (this.cells[playerPos.x][playerPos.y + 1].tileID !== 4) {
                 playerPos.y++;
-                if (playerPos.y >= this.camera.yOffset + this.camera.height - (this.camThresh / 2)) {
+                if (playerPos.y >= this.camera.yOffset + this.camera.height - (this.camThresh - 3)) {
                     this.camera.yOffset += step;
-                    if (this.camera.yOffset + this.camera.height >= this.height)
+                    if (this.camera.yOffset + this.camera.height >= this.height) {
                         this.camera.yOffset = (this.height - this.camera.height);
+                    }
                 }
             }
             this.redraw = true;

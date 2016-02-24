@@ -1,3 +1,82 @@
+var GAMEINFO;
+(function (GAMEINFO) {
+    GAMEINFO.TILESIZE = 16;
+    GAMEINFO.GAME_PIXEL_WIDTH = 800;
+    GAMEINFO.GAME_PIXEL_HEIGHT = 448;
+    GAMEINFO.GAME_TILE_WIDTH = GAMEINFO.GAME_PIXEL_WIDTH / GAMEINFO.TILESIZE;
+    GAMEINFO.GAME_TILE_HEIGHT = GAMEINFO.GAME_PIXEL_HEIGHT / GAMEINFO.TILESIZE;
+    GAMEINFO.TEXTLOG_TILE_HEIGHT = 6;
+    GAMEINFO.GAMESCREEN_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH * .8;
+    GAMEINFO.GAMESCREEN_TILE_HEIGHT = GAMEINFO.GAME_TILE_HEIGHT - GAMEINFO.TEXTLOG_TILE_HEIGHT;
+    GAMEINFO.SIDEBAR_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH - GAMEINFO.GAMESCREEN_TILE_WIDTH;
+    GAMEINFO.SIDEBAR_TILE_HEIGHT = GAMEINFO.GAME_TILE_HEIGHT;
+    GAMEINFO.TEXTLOG_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH - GAMEINFO.SIDEBAR_TILE_WIDTH;
+})(GAMEINFO || (GAMEINFO = {}));
+
+var Input;
+(function (Input) {
+    var KB;
+    (function (KB) {
+        (function (KEY) {
+            KEY[KEY["A"] = 65] = "A";
+            KEY[KEY["D"] = 68] = "D";
+            KEY[KEY["W"] = 87] = "W";
+            KEY[KEY["S"] = 83] = "S";
+            KEY[KEY["LEFT"] = 37] = "LEFT";
+            KEY[KEY["RIGHT"] = 39] = "RIGHT";
+            KEY[KEY["UP"] = 38] = "UP";
+            KEY[KEY["DOWN"] = 40] = "DOWN";
+            KEY[KEY["ENTER"] = 13] = "ENTER";
+            KEY[KEY["SPACE"] = 32] = "SPACE";
+        })(KB.KEY || (KB.KEY = {}));
+        var KEY = KB.KEY;
+        var _isDown = [];
+        var _isUp = [];
+        var _wasDown = [];
+        for (var i = 0; i < 256; i++) {
+            _isUp[i] = true;
+        }
+        function isDown(keyCode) {
+            return (_isDown[keyCode]);
+        }
+        KB.isDown = isDown;
+        function wasDown(keyCode) {
+            var result = _wasDown[keyCode];
+            _wasDown[keyCode] = false;
+            return (result);
+        }
+        KB.wasDown = wasDown;
+        function keyDown(event) {
+            var keyCode = event.which;
+            _isDown[keyCode] = true;
+            if (_isUp[keyCode]) {
+                _wasDown[keyCode] = true;
+            }
+            _isUp[keyCode] = false;
+        }
+        KB.keyDown = keyDown;
+        function keyUp(event) {
+            var keyCode = event.which;
+            _isDown[keyCode] = false;
+            _isUp[keyCode] = true;
+        }
+        KB.keyUp = keyUp;
+    })(KB = Input.KB || (Input.KB = {}));
+})(Input || (Input = {}));
+
+var Camera = (function () {
+    function Camera(width, height, xOffset, yOffset) {
+        if (xOffset === void 0) { xOffset = 0; }
+        if (yOffset === void 0) { yOffset = 0; }
+        this.width = width;
+        this.height = height;
+        this.xOffset = xOffset;
+        this.yOffset = yOffset;
+    }
+    return Camera;
+}());
+
+
 function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -13,7 +92,6 @@ function shuffle(array) {
     return array;
 }
 
-
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -21,20 +99,6 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var ECS;
 (function (ECS) {
-    var Entity = (function () {
-        function Entity() {
-            this.components = {};
-            if (!Entity.autoID)
-                Entity.autoID = 0;
-            this.id = Entity.autoID++;
-        }
-        Entity.prototype.addComponent = function (component) {
-            this.components[component.name] = component;
-            this[component.name] = component;
-        };
-        return Entity;
-    }());
-    ECS.Entity = Entity;
     var Components;
     (function (Components) {
         var Component = (function () {
@@ -74,20 +138,26 @@ var ECS;
     })(Components = ECS.Components || (ECS.Components = {}));
 })(ECS || (ECS = {}));
 
-var GAMEINFO;
-(function (GAMEINFO) {
-    GAMEINFO.TILESIZE = 16;
-    GAMEINFO.GAME_PIXEL_WIDTH = 800;
-    GAMEINFO.GAME_PIXEL_HEIGHT = 448;
-    GAMEINFO.GAME_TILE_WIDTH = GAMEINFO.GAME_PIXEL_WIDTH / GAMEINFO.TILESIZE;
-    GAMEINFO.GAME_TILE_HEIGHT = GAMEINFO.GAME_PIXEL_HEIGHT / GAMEINFO.TILESIZE;
-    GAMEINFO.TEXTLOG_TILE_HEIGHT = 6;
-    GAMEINFO.GAMESCREEN_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH * .8;
-    GAMEINFO.GAMESCREEN_TILE_HEIGHT = GAMEINFO.GAME_TILE_HEIGHT - GAMEINFO.TEXTLOG_TILE_HEIGHT;
-    GAMEINFO.SIDEBAR_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH - GAMEINFO.GAMESCREEN_TILE_WIDTH;
-    GAMEINFO.SIDEBAR_TILE_HEIGHT = GAMEINFO.GAME_TILE_HEIGHT;
-    GAMEINFO.TEXTLOG_TILE_WIDTH = GAMEINFO.GAME_TILE_WIDTH - GAMEINFO.SIDEBAR_TILE_WIDTH;
-})(GAMEINFO || (GAMEINFO = {}));
+var ECS;
+(function (ECS) {
+    var Entity = (function () {
+        function Entity() {
+            this.components = {};
+            if (!Entity.autoID) {
+                Entity.autoID = 0;
+            }
+            this.id = Entity.autoID++;
+        }
+        Entity.prototype.addComponent = function (component) {
+            this.components[component.name] = component;
+            this[component.name] = component;
+        };
+        return Entity;
+    }());
+    ECS.Entity = Entity;
+})(ECS || (ECS = {}));
+
+
 var TileSet = (function () {
     function TileSet() {
     }
@@ -98,6 +168,7 @@ var Item = (function () {
     }
     return Item;
 }());
+
 var Cell = (function () {
     function Cell(tileID, itemIDs, entityID) {
         if (tileID === void 0) { tileID = 0; }
@@ -111,23 +182,14 @@ var Cell = (function () {
     }
     return Cell;
 }());
-var Camera = (function () {
-    function Camera(width, height, xOffset, yOffset) {
-        if (xOffset === void 0) { xOffset = 0; }
-        if (yOffset === void 0) { yOffset = 0; }
-        this.width = width;
-        this.height = height;
-        this.xOffset = xOffset;
-        this.yOffset = yOffset;
-    }
-    return Camera;
-}());
+
 var Level = (function () {
     function Level(width, height, camera) {
         this.redraw = true;
         this.render_m = true;
         this.render_mm = true;
         this.camThresh = 12;
+        this.timer = 0;
         this.cells = [];
         this.width = width;
         this.height = height;
@@ -145,14 +207,18 @@ var Level = (function () {
         this.renderCache.getContext("2d").imageSmoothingEnabled = false;
     }
     Level.prototype.snapCameraToLevel = function () {
-        if (this.camera.xOffset <= 0)
+        if (this.camera.xOffset <= 0) {
             this.camera.xOffset = 0;
-        if (this.camera.xOffset + this.camera.width >= this.width)
+        }
+        if (this.camera.xOffset + this.camera.width >= this.width) {
             this.camera.xOffset = (this.width - this.camera.width);
-        if (this.camera.yOffset <= 0)
+        }
+        if (this.camera.yOffset <= 0) {
             this.camera.yOffset = 0;
-        if (this.camera.yOffset + this.camera.height >= this.height)
+        }
+        if (this.camera.yOffset + this.camera.height >= this.height) {
             this.camera.yOffset = (this.height - this.camera.height);
+        }
     };
     Level.prototype.partOfRoom = function (cell) {
         return (cell.tileID === 2);
@@ -162,46 +228,52 @@ var Level = (function () {
         var maxY = this.height - 1;
         var stack = [];
         var index = 0;
-        if (!stack[index])
+        if (!stack[index]) {
             stack[index] = { x: 0, y: 0 };
+        }
         stack[0].x = x;
         stack[0].y = y;
         this.cells[x][y].discovered = true;
         while (index >= 0) {
-            if (!stack[index])
+            if (!stack[index]) {
                 stack[index] = { x: 0, y: 0 };
+            }
             x = stack[index].x;
             y = stack[index].y;
             index--;
             if ((x > 0) && this.partOfRoom(this.cells[x - 1][y]) && !this.cells[x - 1][y].discovered) {
                 this.cells[x - 1][y].discovered = true;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x - 1;
                 stack[index].y = y;
             }
             if ((x < maxX) && this.partOfRoom(this.cells[x + 1][y]) && !this.cells[x + 1][y].discovered) {
                 this.cells[x + 1][y].discovered = true;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x + 1;
                 stack[index].y = y;
             }
             if ((y > 0) && this.partOfRoom(this.cells[x][y - 1]) && !this.cells[x][y - 1].discovered) {
                 this.cells[x][y - 1].discovered = true;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x;
                 stack[index].y = y - 1;
             }
             if ((y < maxY) && this.partOfRoom(this.cells[x][y + 1]) && !this.cells[x][y + 1].discovered) {
                 this.cells[x][y + 1].discovered = true;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x;
                 stack[index].y = y + 1;
             }
@@ -225,101 +297,112 @@ var Level = (function () {
         var maxY = this.height - 1;
         var stack = [];
         var index = 0;
-        if (!stack[index])
+        if (!stack[index]) {
             stack[index] = { x: 0, y: 0 };
+        }
         stack[0].x = x;
         stack[0].y = y;
         this.cells[x][y].tileID = fill;
         while (index >= 0) {
-            if (!stack[index])
+            if (!stack[index]) {
                 stack[index] = { x: 0, y: 0 };
+            }
             x = stack[index].x;
             y = stack[index].y;
             index--;
             if ((x > 0) && (this.cells[x - 1][y].tileID === target)) {
                 this.cells[x - 1][y].tileID = fill;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x - 1;
                 stack[index].y = y;
             }
             if ((x < maxX) && (this.cells[x + 1][y].tileID === target)) {
                 this.cells[x + 1][y].tileID = fill;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x + 1;
                 stack[index].y = y;
             }
             if ((y > 0) && (this.cells[x][y - 1].tileID === target)) {
                 this.cells[x][y - 1].tileID = fill;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x;
                 stack[index].y = y - 1;
             }
             if ((y < maxY) && (this.cells[x][y + 1].tileID === target)) {
                 this.cells[x][y + 1].tileID = fill;
                 index++;
-                if (!stack[index])
+                if (!stack[index]) {
                     stack[index] = { x: 0, y: 0 };
+                }
                 stack[index].x = x;
                 stack[index].y = y + 1;
             }
         }
     };
-    Level.prototype.getWidth = function () {
-        return this.width;
-    };
-    Level.prototype.getHeight = function () {
-        return this.height;
-    };
-    Level.prototype.update = function () {
+    Level.prototype.update = function (delta) {
+        this.timer += delta;
+        if (this.timer < 75)
+            return;
         var step = 1;
         var player = this.EntityList[0];
         var playerPos = player["pos"].value;
-        if (Input.KB.wasDown(Input.KB.KEY.LEFT)) {
+        if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
+            this.timer = 0;
             if (this.cells[playerPos.x - 1][playerPos.y].tileID !== 4) {
                 playerPos.x--;
                 if (playerPos.x < this.camera.xOffset + this.camThresh) {
                     this.camera.xOffset -= step;
-                    if (this.camera.xOffset <= 0)
+                    if (this.camera.xOffset <= 0) {
                         this.camera.xOffset = 0;
+                    }
                 }
             }
             this.redraw = true;
         }
-        else if (Input.KB.wasDown(Input.KB.KEY.RIGHT)) {
+        else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
+            this.timer = 0;
             if (this.cells[playerPos.x + 1][playerPos.y].tileID !== 4) {
                 playerPos.x++;
                 if (playerPos.x >= this.camera.xOffset + this.camera.width - this.camThresh) {
                     this.camera.xOffset += step;
-                    if (this.camera.xOffset + this.camera.width >= this.width)
+                    if (this.camera.xOffset + this.camera.width >= this.width) {
                         this.camera.xOffset = (this.width - this.camera.width);
+                    }
                 }
             }
             this.redraw = true;
         }
-        if (Input.KB.wasDown(Input.KB.KEY.UP)) {
+        if (Input.KB.isDown(Input.KB.KEY.UP)) {
+            this.timer = 0;
             if (this.cells[playerPos.x][playerPos.y - 1].tileID !== 4) {
                 playerPos.y--;
-                if (playerPos.y < this.camera.yOffset + (this.camThresh / 2)) {
+                if (playerPos.y < this.camera.yOffset + (this.camThresh - 3)) {
                     this.camera.yOffset -= step;
-                    if (this.camera.yOffset <= 0)
+                    if (this.camera.yOffset <= 0) {
                         this.camera.yOffset = 0;
+                    }
                 }
             }
             this.redraw = true;
         }
-        else if (Input.KB.wasDown(Input.KB.KEY.DOWN)) {
+        else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
+            this.timer = 0;
             if (this.cells[playerPos.x][playerPos.y + 1].tileID !== 4) {
                 playerPos.y++;
-                if (playerPos.y >= this.camera.yOffset + this.camera.height - (this.camThresh / 2)) {
+                if (playerPos.y >= this.camera.yOffset + this.camera.height - (this.camThresh - 3)) {
                     this.camera.yOffset += step;
-                    if (this.camera.yOffset + this.camera.height >= this.height)
+                    if (this.camera.yOffset + this.camera.height >= this.height) {
                         this.camera.yOffset = (this.height - this.camera.height);
+                    }
                 }
             }
             this.redraw = true;
@@ -465,8 +548,9 @@ var Cave = (function (_super) {
         _super.call(this, width, height, camera);
         for (var x = 0; x < this.width; x++) {
             for (var y = 0; y < this.height; y++) {
-                if (this.cells[x] === undefined)
+                if (this.cells[x] === undefined) {
                     this.cells[x] = [];
+                }
                 if ((Math.random() * 100) < 50 || (x === 0 || x === (this.width - 1) || y === 0 || y === (this.height - 1))) {
                     this.cells[x][y] = new Cell(0);
                 }
@@ -519,11 +603,13 @@ var Cave = (function (_super) {
     Cave.prototype.getLiveNeighbors = function (x, y) {
         var count = 0;
         for (var nx = x - 1; nx <= x + 1; nx++) {
-            if (nx < 0 || nx > this.width)
+            if (nx < 0 || nx > this.width) {
                 continue;
+            }
             for (var ny = y - 1; ny <= y + 1; ny++) {
-                if (ny < 0 || ny > this.height)
+                if (ny < 0 || ny > this.height) {
                     continue;
+                }
                 if (!(nx === x && ny === y)) {
                     count += this.cells[nx][ny].tileID;
                 }
@@ -559,11 +645,6 @@ var Cave = (function (_super) {
     return Cave;
 }(Level));
 
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
 var WALL;
 (function (WALL) {
     WALL[WALL["N"] = 0] = "N";
@@ -604,6 +685,12 @@ var Room = (function () {
     };
     return Room;
 }());
+
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 var Dungeon = (function (_super) {
     __extends(Dungeon, _super);
     function Dungeon(width, height, camera) {
@@ -611,8 +698,9 @@ var Dungeon = (function (_super) {
         this.rooms = [];
         for (var x = 0; x < this.width; x++) {
             for (var y = 0; y < this.height; y++) {
-                if (this.cells[x] === undefined)
+                if (this.cells[x] === undefined) {
                     this.cells[x] = [];
+                }
                 this.cells[x][y] = new Cell(0);
             }
         }
@@ -630,10 +718,12 @@ var Dungeon = (function (_super) {
             x = (wall === WALL.E) ? x - 1 : x;
             y = (wall === WALL.S) ? y - 1 : y;
         }
-        if (wall === WALL.N || wall === WALL.S)
+        if (wall === WALL.N || wall === WALL.S) {
             x -= 1;
-        if (wall === WALL.W || wall === WALL.E)
+        }
+        if (wall === WALL.W || wall === WALL.E) {
             y -= 1;
+        }
         for (var x0 = x; !(x0 > (x + w)) && result; x0++) {
             for (var y0 = y; !(y0 > (y + h)) && result; y0++) {
                 result = result && (this.cells[x0] !== undefined)
@@ -724,10 +814,12 @@ var Dungeon = (function (_super) {
             }
             do {
                 if (attempts > 5 || attempts === 0) {
-                    if (roomStack[roomStack.length - 1].walls.length === 0)
+                    if (roomStack[roomStack.length - 1].walls.length === 0) {
                         roomStack.pop();
-                    if (roomStack.length === 0)
+                    }
+                    if (roomStack.length === 0) {
                         break;
+                    }
                     p = roomStack[roomStack.length - 1].getRandomWall();
                     lastFeature = roomStack[roomStack.length - 1].roomType;
                 }
@@ -735,10 +827,12 @@ var Dungeon = (function (_super) {
                 attempts++;
             } while (!this.scan(room, p.w, currentFeature !== lastFeature));
             attempts = 0;
-            if (roomStack.length === 0)
+            if (roomStack.length === 0) {
                 break;
-            if (currentFeature !== lastFeature)
+            }
+            if (currentFeature !== lastFeature) {
                 this.addTile(p, 3);
+            }
             roomStack[roomStack.length] = room;
             this.addRoom(room);
             if (currentFeature === "C") {
@@ -771,56 +865,6 @@ var Dungeon = (function (_super) {
     };
     return Dungeon;
 }(Level));
-
-var Input;
-(function (Input) {
-    var KB;
-    (function (KB) {
-        (function (KEY) {
-            KEY[KEY["A"] = 65] = "A";
-            KEY[KEY["D"] = 68] = "D";
-            KEY[KEY["W"] = 87] = "W";
-            KEY[KEY["S"] = 83] = "S";
-            KEY[KEY["LEFT"] = 37] = "LEFT";
-            KEY[KEY["RIGHT"] = 39] = "RIGHT";
-            KEY[KEY["UP"] = 38] = "UP";
-            KEY[KEY["DOWN"] = 40] = "DOWN";
-            KEY[KEY["ENTER"] = 13] = "ENTER";
-            KEY[KEY["SPACE"] = 32] = "SPACE";
-        })(KB.KEY || (KB.KEY = {}));
-        var KEY = KB.KEY;
-        var _isDown = [];
-        var _isUp = [];
-        var _wasDown = [];
-        for (var i = 0; i < 256; i++) {
-            _isUp[i] = true;
-        }
-        function isDown(keyCode) {
-            return (_isDown[keyCode]);
-        }
-        KB.isDown = isDown;
-        function wasDown(keyCode) {
-            var result = _wasDown[keyCode];
-            _wasDown[keyCode] = false;
-            return (result);
-        }
-        KB.wasDown = wasDown;
-        function keyDown(event) {
-            var keyCode = event.which;
-            _isDown[keyCode] = true;
-            if (_isUp[keyCode])
-                _wasDown[keyCode] = true;
-            _isUp[keyCode] = false;
-        }
-        KB.keyDown = keyDown;
-        function keyUp(event) {
-            var keyCode = event.which;
-            _isDown[keyCode] = false;
-            _isUp[keyCode] = true;
-        }
-        KB.keyUp = keyUp;
-    })(KB = Input.KB || (Input.KB = {}));
-})(Input || (Input = {}));
 
 var Game = (function () {
     function Game(screen) {
@@ -875,11 +919,12 @@ var Game = (function () {
             case "Game":
                 if (this.deltaPaused > 0) {
                     delta -= this.deltaPaused;
-                    if (delta < 0)
+                    if (delta < 0) {
                         delta = 0;
+                    }
                     this.deltaPaused = 0;
                 }
-                this.level.update();
+                this.level.update(delta);
                 break;
             case "GamePause":
                 break;

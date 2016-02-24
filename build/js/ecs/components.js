@@ -5,20 +5,6 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var ECS;
 (function (ECS) {
-    var Entity = (function () {
-        function Entity() {
-            this.components = {};
-            if (!Entity.autoID)
-                Entity.autoID = 0;
-            this.id = Entity.autoID++;
-        }
-        Entity.prototype.addComponent = function (component) {
-            this.components[component.name] = component;
-            this[component.name] = component;
-        };
-        return Entity;
-    }());
-    ECS.Entity = Entity;
     var Components;
     (function (Components) {
         var Component = (function () {

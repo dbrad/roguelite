@@ -34,8 +34,9 @@ namespace Input {
         export function keyDown(event: KeyboardEvent): void {
             let keyCode: number = event.which;
             _isDown[keyCode] = true;
-            if (_isUp[keyCode])
+            if (_isUp[keyCode]) {
                 _wasDown[keyCode] = true;
+            }
             _isUp[keyCode] = false;
         }
 

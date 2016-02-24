@@ -1,10 +1,15 @@
 /// <reference path="./input.ts"/>
-/// <reference path="./types.ts"/>
-/// <reference path="./ecs.ts"/>
-/// <reference path="./game_objs.ts"/>
-/// <reference path="./cave.ts"/>
-/// <reference path="./dungeon.ts"/>
+/// <reference path="./camera.ts"/>
+/// <reference path="./game_config.ts"/>
 
+/// <reference path="../types/types.ts"/>
+/// <reference path="../util/utility.ts"/>
+
+/// <reference path="../ecs/components.ts"/>
+/// <reference path="../ecs/entity.ts"/>
+
+/// <reference path="../world/level.ts"/>
+/// <reference path="../world/dungeon.ts"/>
 
 class Game {
     private _loopHandle: number;
@@ -19,7 +24,6 @@ class Game {
 
     constructor(screen: HTMLCanvasElement) {
         console.log("Setting up screen");
-
         // Hook our game up to our canvas "Screen"
         this.screen = screen;
         this.ctx = <Context2D>screen.getContext("2d");
@@ -52,15 +56,15 @@ class Game {
         player["pos"].value.y = this.level.entrance.y;
         this.level.EntityList.push(player);
 
-        for (let i = 0; i < 20; i++){
-          let enemy = new ECS.Entity();
-          enemy.addComponent(new ECS.Components.IsEnemy());
-          enemy.addComponent(new ECS.Components.TilePos());
-          do {
-          enemy["pos"].value.x = randomInt(0, 159);
-          enemy["pos"].value.y = randomInt(0, 159);
-        } while (this.level.cells[enemy["pos"].value.x][enemy["pos"].value.y].tileID !== 2)
-          this.level.EntityList.push(enemy);
+        for (let i = 0; i < 20; i++) {
+            let enemy = new ECS.Entity();
+            enemy.addComponent(new ECS.Components.IsEnemy());
+            enemy.addComponent(new ECS.Components.TilePos());
+            do {
+                enemy["pos"].value.x = randomInt(0, 159);
+                enemy["pos"].value.y = randomInt(0, 159);
+            } while (this.level.cells[enemy["pos"].value.x][enemy["pos"].value.y].tileID !== 2);
+            this.level.EntityList.push(enemy);
         }
         this.state = "MainMenu";
     }
@@ -77,10 +81,10 @@ class Game {
                 // Pause delta handling
                 if (this.deltaPaused > 0) {
                     delta -= this.deltaPaused;
-                    if (delta < 0) delta = 0;
+                    if (delta < 0) { delta = 0; }
                     this.deltaPaused = 0;
                 }
-                this.level.update();
+                this.level.update(delta);
                 break;
             case "GamePause":
                 break;
@@ -113,29 +117,29 @@ class Game {
                  * this manager will likely keep a history of live levels for backtracking and such
                  */
                 if (this.level.redraw) {
-                  // draw (and maybe re-render) the level, move this to a world class?
-                  this.level.draw(this.bufferCtx);
+                    // draw (and maybe re-render) the level, move this to a world class?
+                    this.level.draw(this.bufferCtx);
 
-                  // place holder for textlog
-                  this.bufferCtx.fillStyle = "#000000";
-                  this.bufferCtx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
+                    // place holder for textlog
+                    this.bufferCtx.fillStyle = "#000000";
+                    this.bufferCtx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
 
-                  // place holder for sidebar
-                  this.bufferCtx.fillStyle = "#000000";
-                  this.bufferCtx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
+                    // place holder for sidebar
+                    this.bufferCtx.fillStyle = "#000000";
+                    this.bufferCtx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
 
-                  // draw the minimap, also move this to a world class?
-                  this.level.drawMiniMap(this.bufferCtx);
+                    // draw the minimap, also move this to a world class?
+                    this.level.drawMiniMap(this.bufferCtx);
 
-                  // draw the entities, also move this to a world class?
-                  this.level.drawEntities(this.bufferCtx);
+                    // draw the entities, also move this to a world class?
+                    this.level.drawEntities(this.bufferCtx);
 
-                  // draw the offscreen canvas to the onscreen canvas
-                  this.ctx.drawImage(
-                    this.buffer,
-                    0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT,
-                    0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
-                  this.level.redraw = false;
+                    // draw the offscreen canvas to the onscreen canvas
+                    this.ctx.drawImage(
+                        this.buffer,
+                        0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT,
+                        0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
+                    this.level.redraw = false;
                 }
                 break;
             case "GamePause":

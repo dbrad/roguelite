@@ -1,31 +1,54 @@
 {
     "compilerOptions": {
+        "target": "es5",
+        "module": "commonjs",
+        "declaration": false,
         "noImplicitAny": true,
         "removeComments": true,
         "outDir": "./build/js/",
-        "rootDir": "./src/",
-        "target": "es5",
-        "listFiles": true
+        "listFiles": true,
+        "preserveConstEnums": true,
+        "noLib": false,
+        "suppressExcessPropertyErrors": true,
+        "suppressImplicitAnyIndexErrors": true,
+        "noResolve": true
     },
-    "exclude": [
-        "node_modules"
-    ],
     "filesGlob": [
-        "./**/*.ts",
-        "./**/*.tsx",
-        "!./node_modules/**"
+        "**/*.ts",
+        "**/*.tsx",
+        "!node_modules/**"
     ],
     "files": [
-        "./src/cave.ts",
-        "./src/dungeon.ts",
-        "./src/ecs.ts",
-        "./src/game_objs.ts",
-        "./src/game.ts",
-        "./src/input.ts",
-        "./src/types.ts",
-        "./src/utility.ts"
+        "src/ecs/components.ts",
+        "src/ecs/entity.ts",
+        "src/ecs/systems.ts",
+        "src/system/camera.ts",
+        "src/system/game_config.ts",
+        "src/system/game.ts",
+        "src/system/input.ts",
+        "src/types/types.ts",
+        "src/util/utility.ts",
+        "src/world/cave.ts",
+        "src/world/cell.ts",
+        "src/world/dungeon.ts",
+        "src/world/game_objs.ts",
+        "src/world/level.ts",
+        "src/world/room.ts"
     ],
+    "formatCodeOptions": {
+        "indentSize": 4,
+        "tabSize": 4,
+        "insertSpaceAfterCommaDelimiter": true,
+        "insertSpaceAfterSemicolonInForStatements": true,
+        "insertSpaceBeforeAndAfterBinaryOperators": true,
+        "insertSpaceAfterKeywordsInControlFlowStatements": true,
+        "insertSpaceAfterFunctionKeywordForAnonymousFunctions": false,
+        "insertSpaceAfterOpeningAndBeforeClosingNonemptyParenthesis": false,
+        "placeOpenBraceOnNewLineForFunctions": false,
+        "placeOpenBraceOnNewLineForControlBlocks": false
+    },
     "atom": {
-        "rewriteTsconfig": true
+        "rewriteTsconfig": true,
+        "formatOnSave": true
     }
 }

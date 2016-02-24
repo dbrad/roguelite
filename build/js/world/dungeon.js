@@ -3,46 +3,6 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-var WALL;
-(function (WALL) {
-    WALL[WALL["N"] = 0] = "N";
-    WALL[WALL["E"] = 1] = "E";
-    WALL[WALL["S"] = 2] = "S";
-    WALL[WALL["W"] = 3] = "W";
-})(WALL || (WALL = {}));
-;
-var Room = (function () {
-    function Room() {
-        this.x = 0;
-        this.y = 0;
-        this.w = 0;
-        this.h = 0;
-        this.walls = [WALL.N, WALL.E, WALL.S, WALL.W];
-        shuffle(this.walls);
-    }
-    Room.prototype.getRandomWall = function () {
-        var randWall = this.walls.pop();
-        var x, y;
-        if (randWall === WALL.N) {
-            x = this.x + Math.floor(this.w / 2);
-            y = this.y - 1;
-        }
-        else if (randWall === WALL.S) {
-            x = this.x + Math.floor(this.w / 2);
-            y = this.y + this.h;
-        }
-        else if (randWall === WALL.W) {
-            x = this.x - 1;
-            y = this.y + Math.floor(this.h / 2);
-        }
-        else if (randWall === WALL.E) {
-            x = this.x + this.w;
-            y = this.y + Math.floor(this.h / 2);
-        }
-        return { x: x, y: y, w: randWall };
-    };
-    return Room;
-}());
 var Dungeon = (function (_super) {
     __extends(Dungeon, _super);
     function Dungeon(width, height, camera) {
@@ -50,8 +10,9 @@ var Dungeon = (function (_super) {
         this.rooms = [];
         for (var x = 0; x < this.width; x++) {
             for (var y = 0; y < this.height; y++) {
-                if (this.cells[x] === undefined)
+                if (this.cells[x] === undefined) {
                     this.cells[x] = [];
+                }
                 this.cells[x][y] = new Cell(0);
             }
         }
@@ -69,10 +30,12 @@ var Dungeon = (function (_super) {
             x = (wall === WALL.E) ? x - 1 : x;
             y = (wall === WALL.S) ? y - 1 : y;
         }
-        if (wall === WALL.N || wall === WALL.S)
+        if (wall === WALL.N || wall === WALL.S) {
             x -= 1;
-        if (wall === WALL.W || wall === WALL.E)
+        }
+        if (wall === WALL.W || wall === WALL.E) {
             y -= 1;
+        }
         for (var x0 = x; !(x0 > (x + w)) && result; x0++) {
             for (var y0 = y; !(y0 > (y + h)) && result; y0++) {
                 result = result && (this.cells[x0] !== undefined)
@@ -163,10 +126,12 @@ var Dungeon = (function (_super) {
             }
             do {
                 if (attempts > 5 || attempts === 0) {
-                    if (roomStack[roomStack.length - 1].walls.length === 0)
+                    if (roomStack[roomStack.length - 1].walls.length === 0) {
                         roomStack.pop();
-                    if (roomStack.length === 0)
+                    }
+                    if (roomStack.length === 0) {
                         break;
+                    }
                     p = roomStack[roomStack.length - 1].getRandomWall();
                     lastFeature = roomStack[roomStack.length - 1].roomType;
                 }
@@ -174,10 +139,12 @@ var Dungeon = (function (_super) {
                 attempts++;
             } while (!this.scan(room, p.w, currentFeature !== lastFeature));
             attempts = 0;
-            if (roomStack.length === 0)
+            if (roomStack.length === 0) {
                 break;
-            if (currentFeature !== lastFeature)
+            }
+            if (currentFeature !== lastFeature) {
                 this.addTile(p, 3);
+            }
             roomStack[roomStack.length] = room;
             this.addRoom(room);
             if (currentFeature === "C") {
