@@ -42,7 +42,7 @@ class Game {
     init(): void {
         console.log("Initializing...");
 
-        SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "tiles", 16, 0, new Dimension(6, 1)));
+        SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "tiles", 16, 0, new Dimension(7, 1)));
         SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "entities", 16, 0, new Dimension(2, 1), new Point(0, 16)));
 
         SpriteSheetCache.spriteSheet("entities").reColourize(0, 245, 200, 25);
