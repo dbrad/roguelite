@@ -114,7 +114,7 @@ var Dungeon = (function (_super) {
         this.addRoom(room);
         this.rooms.push(room);
         gRooms++;
-        this.entrance = { x: room.x + Math.floor(room.w / 2), y: room.y + Math.floor(room.h / 2) };
+        this.entrance = new Point(room.x + Math.floor(room.w / 2), room.y + Math.floor(room.h / 2));
         this.addTile(this.entrance, 5);
         var p;
         while (roomStack.length > 0 && gRooms < rooms) {

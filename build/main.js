@@ -76,6 +76,24 @@ var Camera = (function () {
     return Camera;
 }());
 
+var Point = (function () {
+    function Point(x, y) {
+        if (x === void 0) { x = 0; }
+        if (y === void 0) { y = 0; }
+        this.x = x;
+        this.y = y;
+    }
+    return Point;
+}());
+var Dimension = (function () {
+    function Dimension(w, h) {
+        if (w === void 0) { w = 0; }
+        if (h === void 0) { h = 0; }
+        this.w = w;
+        this.h = h;
+    }
+    return Dimension;
+}());
 
 function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -91,6 +109,114 @@ function shuffle(array) {
     }
     return array;
 }
+
+var ImageCache;
+(function (ImageCache) {
+    var cache = {};
+    function getTexture(name) {
+        return cache[name];
+    }
+    ImageCache.getTexture = getTexture;
+    var toLoad = {};
+    var loadCount = 0;
+    var Loader;
+    (function (Loader) {
+        function add(name, url) {
+            toLoad[name] = url;
+            loadCount++;
+        }
+        Loader.add = add;
+        function load(callback) {
+            var async = { counter: 0, loadCount: 0, callback: callback };
+            var done = function (async) { if ((async.counter++) === async.loadCount) {
+                async.callback();
+            } };
+            for (var img in toLoad) {
+                cache[img] = new Image();
+                cache[img].src = toLoad[img];
+                cache[img].onload = done.bind(this, async);
+                delete toLoad[img];
+            }
+            loadCount = 0;
+        }
+        Loader.load = load;
+    })(Loader = ImageCache.Loader || (ImageCache.Loader = {}));
+})(ImageCache || (ImageCache = {}));
+
+var SpriteSheet = (function () {
+    function SpriteSheet(imageName, sheetName, tileSize, gutter, subsheet, offset) {
+        if (gutter === void 0) { gutter = 0; }
+        if (subsheet === void 0) { subsheet = new Dimension(0, 0); }
+        if (offset === void 0) { offset = new Point(0, 0); }
+        this.sprites = [];
+        this.name = sheetName;
+        this.offset = offset;
+        this.subsheet = subsheet;
+        this.tileSize = tileSize;
+        this.gutter = gutter;
+        this.image = ImageCache.getTexture(imageName);
+        this.storeSprites();
+    }
+    SpriteSheet.prototype.reColourize = function (index, r, g, b, a) {
+        var spriteCtx = this.sprites[index].getContext("2d");
+        var colourData = spriteCtx.getImageData(0, 0, this.tileSize, this.tileSize);
+        for (var i = 0; i < (this.tileSize * this.tileSize) * 4; i += 4) {
+            colourData.data[i] = r || colourData.data[i];
+            colourData.data[i + 1] = g || colourData.data[i + 1];
+            colourData.data[i + 2] = b || colourData.data[i + 2];
+            colourData.data[i + 3] = a || colourData.data[i + 3];
+        }
+        spriteCtx.putImageData(colourData, 0, 0);
+    };
+    SpriteSheet.prototype.storeSprites = function (callback) {
+        if (callback === void 0) { callback = null; }
+        this.spritesPerRow = ((this.subsheet.w === 0 || this.subsheet.h === 0) ? (this.image.width / this.tileSize) : this.subsheet.w);
+        this.spritesPerCol = ((this.subsheet.w === 0 || this.subsheet.h === 0) ? (this.image.height / this.tileSize) : this.subsheet.h);
+        var sprite;
+        for (var y = 0; y < this.spritesPerCol; y++) {
+            for (var x = 0; x < this.spritesPerRow; x++) {
+                sprite = this.sprites[x + (y * this.spritesPerRow)] = document.createElement('canvas');
+                sprite.width = this.tileSize;
+                sprite.height = this.tileSize;
+                sprite.getContext('2d').drawImage(this.image, ((this.tileSize + this.gutter) * x) + this.offset.x, ((this.tileSize + this.gutter) * y) + this.offset.y, this.tileSize, this.tileSize, 0, 0, this.tileSize, this.tileSize);
+            }
+        }
+    };
+    return SpriteSheet;
+}());
+
+var SpriteSheetCache;
+(function (SpriteSheetCache) {
+    var sheets = {};
+    function storeSheet(sheet) {
+        sheets[sheet.name] = sheet;
+    }
+    SpriteSheetCache.storeSheet = storeSheet;
+    function spriteSheet(name) {
+        return sheets[name];
+    }
+    SpriteSheetCache.spriteSheet = spriteSheet;
+})(SpriteSheetCache || (SpriteSheetCache = {}));
+
+var AudioPool = (function () {
+    function AudioPool(sound, maxSize) {
+        if (maxSize === void 0) { maxSize = 1; }
+        this.pool = [];
+        this.index = 0;
+        this.maxSize = maxSize;
+        for (var i = 0; i < this.maxSize; i++) {
+            this.pool[i] = new Audio(sound);
+            this.pool[i].load();
+        }
+    }
+    AudioPool.prototype.play = function () {
+        if (this.pool[this.index].currentTime == 0 || this.pool[this.index].ended) {
+            this.pool[this.index].play();
+        }
+        this.index = (this.index + 1) % this.maxSize;
+    };
+    return AudioPool;
+}());
 
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -130,7 +256,7 @@ var ECS;
             __extends(TilePos, _super);
             function TilePos() {
                 _super.call(this, "pos");
-                this.value = { x: 0, y: 0 };
+                this.value = new Point(0, 0);
             }
             return TilePos;
         }(Component));
@@ -445,11 +571,12 @@ var Level = (function () {
     Level.prototype.render = function (ctx, tSize) {
         for (var tx = 0, x = 0; tx < this.width; tx++) {
             for (var ty = 0, y = 0; ty < this.height; ty++) {
+                var tCell = null;
                 if (!this.cells[tx] || !this.cells[tx][ty]) {
                     ctx.fillStyle = "#111111";
                 }
                 else {
-                    var tCell = this.cells[tx][ty];
+                    tCell = this.cells[tx][ty];
                     if (!tCell.discovered) {
                         ctx.fillStyle = "#111111";
                     }
@@ -460,7 +587,13 @@ var Level = (function () {
                         ctx.fillStyle = this.getTempColor(tCell.tileID);
                     }
                 }
-                ctx.fillRect(x * tSize, y * tSize, tSize, tSize);
+                if (tCell && tCell.discovered
+                    && tSize === 16) {
+                    ctx.drawImage(SpriteSheetCache.spriteSheet("tiles").sprites[this.cells[tx][ty].tileID], 0, 0, 16, 16, x * 16, y * 16, 16, 16);
+                }
+                else {
+                    ctx.fillRect(x * tSize, y * tSize, tSize, tSize);
+                }
                 y++;
             }
             x++;
@@ -516,23 +649,28 @@ var Level = (function () {
         ctx.fillStyle = "#FFFFFF";
         ctx.fillRect((player["pos"].value.x - this.camera.xOffset - ux) * GAMEINFO.TILESIZE, (player["pos"].value.y - this.camera.yOffset - uy) * GAMEINFO.TILESIZE, (1 + ux + lx) * GAMEINFO.TILESIZE, (1 + uy + ly) * GAMEINFO.TILESIZE);
         ctx.globalAlpha = 1.0;
+        var index = 0;
         for (var _b = 0, _c = this.EntityList; _b < _c.length; _b++) {
             var e = _c[_b];
             dx = dy = 0;
             if (e["player"]) {
+                index = 0;
                 ctx.fillStyle = "#FF6600";
             }
             else {
                 dx = player["pos"].value.x - e["pos"].value.x;
                 dy = player["pos"].value.y - e["pos"].value.y;
+                index = 1;
                 ctx.fillStyle = "#FF0000";
             }
             var t = e.components["pos"].value;
             if (e["player"] || (dx >= -ux && dx <= lx && dy >= -uy && dy <= ly)) {
-                ctx.fillRect((t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE), (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE), GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
+                ctx.drawImage(SpriteSheetCache.spriteSheet("entities").sprites[index], 0, 0, 16, 16, (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE), (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE), 16, 16);
                 ctx.fillRect(t.x + (GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width), t.y, 1, 1);
             }
         }
+        ctx.globalAlpha = 1.0;
+        this.redraw = true;
     };
     return Level;
 }());
@@ -802,7 +940,7 @@ var Dungeon = (function (_super) {
         this.addRoom(room);
         this.rooms.push(room);
         gRooms++;
-        this.entrance = { x: room.x + Math.floor(room.w / 2), y: room.y + Math.floor(room.h / 2) };
+        this.entrance = new Point(room.x + Math.floor(room.w / 2), room.y + Math.floor(room.h / 2));
         this.addTile(this.entrance, 5);
         var p;
         while (roomStack.length > 0 && gRooms < rooms) {
@@ -888,6 +1026,12 @@ var Game = (function () {
     }
     Game.prototype.init = function () {
         console.log("Initializing...");
+        SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "tiles", 16, 0, new Dimension(6, 1)));
+        SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "entities", 16, 0, new Dimension(2, 1), new Point(0, 16)));
+        SpriteSheetCache.spriteSheet("entities").reColourize(0, 245, 200, 25);
+        SpriteSheetCache.spriteSheet("entities").reColourize(1, 150, 150, 150);
+        SpriteSheetCache.spriteSheet("tiles").reColourize(4, 75, 75, 75);
+        SpriteSheetCache.spriteSheet("tiles").reColourize(3, 140, 100, 60);
         this.level = new Dungeon(160, 160, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
         this.level.floodDiscover(this.level.entrance.x, this.level.entrance.y);
         this.level.camera.xOffset = this.level.entrance.x - (this.level.camera.width / 2);
@@ -942,16 +1086,20 @@ var Game = (function () {
             case "Game":
                 if (this.clearScreen || this.level.redraw) {
                     this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
+                    this.bufferCtx.clearRect(0, 0, this.screen.width, this.screen.height);
                     this.clearScreen = false;
                 }
                 if (this.level.redraw) {
+                    this.bufferCtx.fillStyle = "#ffffff";
                     this.level.draw(this.bufferCtx);
                     this.bufferCtx.fillStyle = "#000000";
                     this.bufferCtx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
                     this.bufferCtx.fillStyle = "#000000";
                     this.bufferCtx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
+                    this.bufferCtx.fillStyle = "#ffffff";
                     this.level.drawMiniMap(this.bufferCtx);
                     this.level.drawEntities(this.bufferCtx);
+                    this.ctx.fillStyle = "#ffffff";
                     this.ctx.drawImage(this.buffer, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
                     this.level.redraw = false;
                 }
@@ -1028,8 +1176,11 @@ window.onload = function () {
     window.onkeydown = Input.KB.keyDown;
     window.onkeyup = Input.KB.keyUp;
     var game = new Game(document.getElementById("gameCanvas"));
-    game.init();
-    window.onblur = game.pause.bind(game);
-    window.onfocus = game.unpause.bind(game);
-    game.run();
+    ImageCache.Loader.add("sheet", "sheet1.png");
+    ImageCache.Loader.load(function () {
+        game.init();
+        window.onblur = game.pause.bind(game);
+        window.onfocus = game.unpause.bind(game);
+        game.run();
+    });
 };

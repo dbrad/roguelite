@@ -41,6 +41,15 @@ class Game {
 
     init(): void {
         console.log("Initializing...");
+
+        SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "tiles", 16, 0, new Dimension(6, 1)));
+        SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "entities", 16, 0, new Dimension(2, 1), new Point(0, 16)));
+
+        SpriteSheetCache.spriteSheet("entities").reColourize(0, 245, 200, 25);
+        SpriteSheetCache.spriteSheet("entities").reColourize(1, 150, 150, 150);
+
+        SpriteSheetCache.spriteSheet("tiles").reColourize(4, 75, 75, 75);
+        SpriteSheetCache.spriteSheet("tiles").reColourize(3, 140, 100, 60);
         // most of this will move to the world class
         // will load a saved world or make a new world from main menu
         this.level = new Dungeon(160, 160, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
@@ -108,6 +117,7 @@ class Game {
             case "Game":
                 if (this.clearScreen || this.level.redraw) {
                     this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
+                    this.bufferCtx.clearRect(0, 0, this.screen.width, this.screen.height);
                     this.clearScreen = false;
                 }
 
@@ -118,6 +128,7 @@ class Game {
                  */
                 if (this.level.redraw) {
                     // draw (and maybe re-render) the level, move this to a world class?
+                    this.bufferCtx.fillStyle = "#ffffff";
                     this.level.draw(this.bufferCtx);
 
                     // place holder for textlog
@@ -128,6 +139,7 @@ class Game {
                     this.bufferCtx.fillStyle = "#000000";
                     this.bufferCtx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
 
+                    this.bufferCtx.fillStyle = "#ffffff";
                     // draw the minimap, also move this to a world class?
                     this.level.drawMiniMap(this.bufferCtx);
 
@@ -135,6 +147,7 @@ class Game {
                     this.level.drawEntities(this.bufferCtx);
 
                     // draw the offscreen canvas to the onscreen canvas
+                    this.ctx.fillStyle = "#ffffff";
                     this.ctx.drawImage(
                         this.buffer,
                         0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT,
@@ -227,15 +240,11 @@ window.onload = () => {
     window.onkeyup = Input.KB.keyUp;
 
     let game = new Game(<HTMLCanvasElement>document.getElementById("gameCanvas"));
-    game.init();
-    window.onblur = game.pause.bind(game);
-    window.onfocus = game.unpause.bind(game);
-    game.run();
-    // ImageCache.Loader.add("sheet", "sheet.png");
-    // ImageCache.Loader.load(function() {
-    //     game.init();
-    //     window.onblur = game.pause.bind(game);
-    //     window.onfocus = game.unpause.bind(game);
-    //     game.run();
-    // })
+    ImageCache.Loader.add("sheet", "sheet1.png");
+    ImageCache.Loader.load(function() {
+        game.init();
+        window.onblur = game.pause.bind(game);
+        window.onfocus = game.unpause.bind(game);
+        game.run();
+    })
 };

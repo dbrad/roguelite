@@ -1,5 +1,8 @@
-/// <reference path="../types/types.ts"/>
 /// <reference path="./components.ts"/>
+
+interface ComponentDictionary {
+    [index: string]: ECS.Components.Component<any>;
+}
 namespace ECS {
     export class Entity {
         public components: ComponentDictionary;

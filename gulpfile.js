@@ -15,6 +15,11 @@ gulp.task('concat', function() {
 
 		"build/js/util/utility.js",
 
+		"build/js/graphics/imagecache.js",
+		"build/js/graphics/spritesheet.js",
+		"build/js/graphics/spritesheetcache.js",
+		"build/js/system/audiopool.js",
+
 		"build/js/ecs/components.js",
 		"build/js/ecs/entity.js",
 		"build/js/ecs/systems.js",

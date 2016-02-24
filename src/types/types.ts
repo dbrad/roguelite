@@ -1,20 +1,31 @@
-/// <reference path="../ecs/components.ts"/>
 interface Context2D extends CanvasRenderingContext2D {
     mozImageSmoothingEnabled?: boolean;
     imageSmoothingEnabled?: boolean;
     webkitImageSmoothingEnabled?: boolean;
 }
 
-interface ComponentDictionary {
-  [index: string]: ECS.Components.Component<any>;
+interface ImageArray {
+    [index: string]: HTMLImageElement;
 }
 
-interface Point {
-  x: number;
-  y: number;
+interface StringArray {
+    [index: string]: string;
 }
 
-interface Dimension {
-  w: number;
-  h: number;
+class Point {
+    x: number;
+    y: number;
+    constructor(x: number = 0, y: number = 0) {
+        this.x = x;
+        this.y = y;
+    }
+}
+
+class Dimension {
+    w: number;
+    h: number;
+    constructor(w: number = 0, h: number = 0) {
+        this.w = w;
+        this.h = h;
+    }
 }

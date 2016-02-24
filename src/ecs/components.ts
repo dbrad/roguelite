@@ -22,7 +22,7 @@ namespace ECS {
         export class TilePos extends Component<Point> {
             constructor() {
                 super("pos");
-                this.value = { x: 0, y: 0 };
+                this.value = new Point(0, 0);
             }
         }
     }

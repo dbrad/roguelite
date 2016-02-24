@@ -128,7 +128,7 @@ class Dungeon extends Level {
         this.rooms.push(room);
         gRooms++;
 
-        this.entrance = { x: room.x + Math.floor(room.w / 2), y: room.y + Math.floor(room.h / 2) };
+        this.entrance = new Point(room.x + Math.floor(room.w / 2), room.y + Math.floor(room.h / 2));
         this.addTile(this.entrance, 5);
 
         let p: { x: number, y: number, w: number };

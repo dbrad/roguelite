@@ -317,10 +317,11 @@ class Level {
     render(ctx: Context2D, tSize: number): void {
         for (let tx = 0, x = 0; tx < this.width; tx++) {
             for (let ty = 0, y = 0; ty < this.height; ty++) {
+                let tCell: Cell = null;
                 if (!this.cells[tx] || !this.cells[tx][ty]) {
                     ctx.fillStyle = "#111111"; // No cell at location
                 } else {
-                    let tCell = this.cells[tx][ty];
+                    tCell = this.cells[tx][ty];
                     if (!tCell.discovered) {
                         ctx.fillStyle = "#111111";
                     } else if (!tCell.visable) {
@@ -329,7 +330,16 @@ class Level {
                         ctx.fillStyle = this.getTempColor(tCell.tileID);
                     }
                 }
-                ctx.fillRect(x * tSize, y * tSize, tSize, tSize);
+                if (tCell && tCell.discovered
+                    && tSize === 16) {
+                    ctx.drawImage(SpriteSheetCache.spriteSheet("tiles").sprites[this.cells[tx][ty].tileID],
+                        0, 0,
+                        16, 16,
+                        x * 16, y * 16,
+                        16, 16);
+                } else {
+                    ctx.fillRect(x * tSize, y * tSize, tSize, tSize);
+                }
                 y++;
             }
             x++;
@@ -402,32 +412,37 @@ class Level {
             (1 + ux + lx) * GAMEINFO.TILESIZE, (1 + uy + ly) * GAMEINFO.TILESIZE);
 
         ctx.globalAlpha = 1.0;
-
+        let index: number = 0;
         for (let e of this.EntityList) {
             dx = dy = 0;
             if (e["player"]) {
+                index = 0;
                 ctx.fillStyle = "#FF6600";
             } else {
                 dx = player["pos"].value.x - e["pos"].value.x;
                 dy = player["pos"].value.y - e["pos"].value.y;
+                index = 1;
                 ctx.fillStyle = "#FF0000";
             }
             let t: Point = e.components["pos"].value;
             if (e["player"] || (dx >= -ux && dx <= lx && dy >= -uy && dy <= ly)) {
-                // if ((t.x * GAMEINFO.TILESIZE) + GAMEINFO.TILESIZE > this.camera.xOffset * GAMEINFO.TILESIZE
-                //   && (t.x * GAMEINFO.TILESIZE)  < (this.camera.xOffset + this.camera.width) * GAMEINFO.TILESIZE
-                //   && (t.y * GAMEINFO.TILESIZE) + GAMEINFO.TILESIZE > this.camera.yOffset * GAMEINFO.TILESIZE
-                //   && (t.y * GAMEINFO.TILESIZE) < (this.camera.yOffset + this.camera.height) * GAMEINFO.TILESIZE) {
-                ctx.fillRect(
+                ctx.drawImage(SpriteSheetCache.spriteSheet("entities").sprites[index],
+                    0, 0,
+                    16, 16,
                     (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE),
                     (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE),
-                    GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
+                    16, 16);
+                // ctx.fillRect(
+                //     (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE),
+                //     (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE),
+                //     GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
                 ctx.fillRect(
                     t.x + (GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width),
                     t.y,
                     1, 1);
             }
         }
-
+        ctx.globalAlpha = 1.0;
+        this.redraw = true;
     }
 }

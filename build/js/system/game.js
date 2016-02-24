@@ -20,6 +20,12 @@ var Game = (function () {
     }
     Game.prototype.init = function () {
         console.log("Initializing...");
+        SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "tiles", 16, 0, new Dimension(6, 1)));
+        SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "entities", 16, 0, new Dimension(2, 1), new Point(0, 16)));
+        SpriteSheetCache.spriteSheet("entities").reColourize(0, 245, 200, 25);
+        SpriteSheetCache.spriteSheet("entities").reColourize(1, 150, 150, 150);
+        SpriteSheetCache.spriteSheet("tiles").reColourize(4, 75, 75, 75);
+        SpriteSheetCache.spriteSheet("tiles").reColourize(3, 140, 100, 60);
         this.level = new Dungeon(160, 160, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
         this.level.floodDiscover(this.level.entrance.x, this.level.entrance.y);
         this.level.camera.xOffset = this.level.entrance.x - (this.level.camera.width / 2);
@@ -74,16 +80,20 @@ var Game = (function () {
             case "Game":
                 if (this.clearScreen || this.level.redraw) {
                     this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
+                    this.bufferCtx.clearRect(0, 0, this.screen.width, this.screen.height);
                     this.clearScreen = false;
                 }
                 if (this.level.redraw) {
+                    this.bufferCtx.fillStyle = "#ffffff";
                     this.level.draw(this.bufferCtx);
                     this.bufferCtx.fillStyle = "#000000";
                     this.bufferCtx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
                     this.bufferCtx.fillStyle = "#000000";
                     this.bufferCtx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
+                    this.bufferCtx.fillStyle = "#ffffff";
                     this.level.drawMiniMap(this.bufferCtx);
                     this.level.drawEntities(this.bufferCtx);
+                    this.ctx.fillStyle = "#ffffff";
                     this.ctx.drawImage(this.buffer, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
                     this.level.redraw = false;
                 }
@@ -160,8 +170,11 @@ window.onload = function () {
     window.onkeydown = Input.KB.keyDown;
     window.onkeyup = Input.KB.keyUp;
     var game = new Game(document.getElementById("gameCanvas"));
-    game.init();
-    window.onblur = game.pause.bind(game);
-    window.onfocus = game.unpause.bind(game);
-    game.run();
+    ImageCache.Loader.add("sheet", "sheet1.png");
+    ImageCache.Loader.load(function () {
+        game.init();
+        window.onblur = game.pause.bind(game);
+        window.onfocus = game.unpause.bind(game);
+        game.run();
+    });
 };

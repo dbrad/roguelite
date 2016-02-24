@@ -260,11 +260,12 @@ var Level = (function () {
     Level.prototype.render = function (ctx, tSize) {
         for (var tx = 0, x = 0; tx < this.width; tx++) {
             for (var ty = 0, y = 0; ty < this.height; ty++) {
+                var tCell = null;
                 if (!this.cells[tx] || !this.cells[tx][ty]) {
                     ctx.fillStyle = "#111111";
                 }
                 else {
-                    var tCell = this.cells[tx][ty];
+                    tCell = this.cells[tx][ty];
                     if (!tCell.discovered) {
                         ctx.fillStyle = "#111111";
                     }
@@ -275,7 +276,13 @@ var Level = (function () {
                         ctx.fillStyle = this.getTempColor(tCell.tileID);
                     }
                 }
-                ctx.fillRect(x * tSize, y * tSize, tSize, tSize);
+                if (tCell && tCell.discovered
+                    && tSize === 16) {
+                    ctx.drawImage(SpriteSheetCache.spriteSheet("tiles").sprites[this.cells[tx][ty].tileID], 0, 0, 16, 16, x * 16, y * 16, 16, 16);
+                }
+                else {
+                    ctx.fillRect(x * tSize, y * tSize, tSize, tSize);
+                }
                 y++;
             }
             x++;
@@ -331,23 +338,28 @@ var Level = (function () {
         ctx.fillStyle = "#FFFFFF";
         ctx.fillRect((player["pos"].value.x - this.camera.xOffset - ux) * GAMEINFO.TILESIZE, (player["pos"].value.y - this.camera.yOffset - uy) * GAMEINFO.TILESIZE, (1 + ux + lx) * GAMEINFO.TILESIZE, (1 + uy + ly) * GAMEINFO.TILESIZE);
         ctx.globalAlpha = 1.0;
+        var index = 0;
         for (var _b = 0, _c = this.EntityList; _b < _c.length; _b++) {
             var e = _c[_b];
             dx = dy = 0;
             if (e["player"]) {
+                index = 0;
                 ctx.fillStyle = "#FF6600";
             }
             else {
                 dx = player["pos"].value.x - e["pos"].value.x;
                 dy = player["pos"].value.y - e["pos"].value.y;
+                index = 1;
                 ctx.fillStyle = "#FF0000";
             }
             var t = e.components["pos"].value;
             if (e["player"] || (dx >= -ux && dx <= lx && dy >= -uy && dy <= ly)) {
-                ctx.fillRect((t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE), (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE), GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
+                ctx.drawImage(SpriteSheetCache.spriteSheet("entities").sprites[index], 0, 0, 16, 16, (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE), (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE), 16, 16);
                 ctx.fillRect(t.x + (GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width), t.y, 1, 1);
             }
         }
+        ctx.globalAlpha = 1.0;
+        this.redraw = true;
     };
     return Level;
 }());

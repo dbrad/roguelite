@@ -36,7 +36,7 @@ var ECS;
             __extends(TilePos, _super);
             function TilePos() {
                 _super.call(this, "pos");
-                this.value = { x: 0, y: 0 };
+                this.value = new Point(0, 0);
             }
             return TilePos;
         }(Component));
