@@ -319,19 +319,18 @@ class Level {
             for (let ty = 0, y = 0; ty < this.height; ty++) {
                 let tCell: Cell = null;
                 if (!this.cells[tx] || !this.cells[tx][ty]) {
-                    ctx.fillStyle = "#111111"; // No cell at location
+                    ctx.fillStyle = "#000000"; // No cell at location
                 } else {
                     tCell = this.cells[tx][ty];
                     if (!tCell.discovered) {
-                        ctx.fillStyle = "#111111";
+                        ctx.fillStyle = "#000000";
                     } else if (!tCell.visable) {
-                        ctx.fillStyle = "#222222";
+                        ctx.fillStyle = this.getTempColor(tCell.tileID); //"#222222";
                     } else {
                         ctx.fillStyle = this.getTempColor(tCell.tileID);
                     }
                 }
-                if (tCell && tCell.discovered
-                    && tSize === 16) {
+                if (tCell && tCell.discovered && tSize === 16) {
                     ctx.drawImage(SpriteSheetCache.spriteSheet("tiles").sprites[this.cells[tx][ty].tileID],
                         0, 0,
                         16, 16,
@@ -380,38 +379,85 @@ class Level {
         let player: ECS.Entity;
         let playerPos: Point;
         let dx: number, dy: number;
+
         for (let e of this.EntityList) {
             if (e["player"]) {
                 player = e;
                 playerPos = player["pos"].value;
             }
         }
-        let ux: number, uy: number, lx: number, ly: number;
-        let defaultDist: number = 4;
-        ux = uy = lx = ly = defaultDist;
-        for (let x0 = defaultDist; x0 >= 0; x0--) {
-            for (let y0 = defaultDist; y0 >= 0; y0--) {
-                if ((this.cells[playerPos.x + x0] && this.cells[playerPos.x + x0][playerPos.y + y0] && this.cells[playerPos.x + x0][playerPos.y + y0].tileID === 4)
-                    || (this.cells[playerPos.x - x0] && this.cells[playerPos.x - x0][playerPos.y + y0] && this.cells[playerPos.x - x0][playerPos.y + y0].tileID === 4)
-                    || (this.cells[playerPos.x + x0] && this.cells[playerPos.x + x0][playerPos.y - y0] && this.cells[playerPos.x + x0][playerPos.y - y0].tileID === 4)
-                    || (this.cells[playerPos.x - x0] && this.cells[playerPos.x - x0][playerPos.y - y0] && this.cells[playerPos.x - x0][playerPos.y - y0].tileID === 4)) {
-                    for (let torchDist = 1; torchDist < defaultDist; torchDist++) {
-                        if (x0 <= torchDist && y0 <= torchDist && torchDist < ux) {
-                            ux = uy = lx = ly = torchDist;
-                            break;
-                        }
+
+        let VisionPts: Point[] = [];
+        let visableCells: Cell[] = [];
+        let torchStr = 3;
+        for (let d = -torchStr; d <= torchStr; d++) {
+            VisionPts[VisionPts.length] = new Point(d, -torchStr);
+            VisionPts[VisionPts.length] = new Point(d, torchStr);
+            VisionPts[VisionPts.length] = new Point(-torchStr, d);
+            VisionPts[VisionPts.length] = new Point(torchStr, d);
+        }
+        let steps: number = 0, incX: number = 0, incY: number = 0;
+        ctx.globalAlpha = 0.1;
+        ctx.fillStyle = "#FFFFFF";
+        let px: number = Math.round((playerPos.x + 0.5) * GAMEINFO.TILESIZE),
+            py: number = Math.round((playerPos.y + 0.5) * GAMEINFO.TILESIZE);
+        for (let pt of VisionPts) {
+            let vx: number = px, vy: number = py;
+
+            dx = Math.round((pt.x) * GAMEINFO.TILESIZE);
+            dy = Math.round((pt.y) * GAMEINFO.TILESIZE);
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+                steps = Math.abs(dx);
+            } else {
+                steps = Math.abs(dy);
+            }
+
+            incX = dx / steps;
+            incY = dy / steps;
+
+            let tx: number = vx, ty: number = vy;
+            for (let v = 0; v < steps; v++) {
+                vx = (vx + incX);
+                vy = (vy + incY);
+                if (incY >= 0) { // looking down
+                    ty = Math.ceil(vy / GAMEINFO.TILESIZE) - 1;
+                } else { // looking up
+                    ty = Math.floor(vy / GAMEINFO.TILESIZE);
+                }
+                if (incX >= 0) { // looking right
+                    tx = Math.ceil(vx / GAMEINFO.TILESIZE) - 1;
+                } else { // looking left
+                    tx = Math.floor(vx / GAMEINFO.TILESIZE);
+                }
+
+
+                if (this.cells[tx] && this.cells[tx][ty]) {
+                    if (this.cells[tx][ty].tileID === 3 || this.cells[tx][ty].tileID === 4) {
+                        break;
+                    }
+                    if (!this.cells[tx][ty].visable) {
+                        this.cells[tx][ty].visable = true;
+                        visableCells[visableCells.length] = this.cells[tx][ty];
+                        ctx.fillRect(
+                            (tx - this.camera.xOffset) * GAMEINFO.TILESIZE,
+                            (ty - this.camera.yOffset) * GAMEINFO.TILESIZE,
+                            GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
                     }
                 }
             }
+            // ctx.globalAlpha = 1.0;
+            // ctx.strokeStyle = "#FFF";
+            // ctx.lineWidth = 2;
+            // ctx.beginPath();
+            // ctx.moveTo(Math.round(px - (this.camera.xOffset * GAMEINFO.TILESIZE)), Math.round(py - (this.camera.yOffset * GAMEINFO.TILESIZE)));
+            // ctx.lineTo(Math.round(vx - (this.camera.xOffset * GAMEINFO.TILESIZE)), Math.round(vy - (this.camera.yOffset * GAMEINFO.TILESIZE)));
+            // ctx.stroke();
+            // ctx.globalAlpha = 0.1;
         }
-        ctx.globalAlpha = 0.1;
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(
-            (player["pos"].value.x - this.camera.xOffset - ux) * GAMEINFO.TILESIZE,
-            (player["pos"].value.y - this.camera.yOffset - uy) * GAMEINFO.TILESIZE,
-            (1 + ux + lx) * GAMEINFO.TILESIZE, (1 + uy + ly) * GAMEINFO.TILESIZE);
-
         ctx.globalAlpha = 1.0;
+
+        // draw Entities to the screen if they are "in range", changing to a visability component.
         let index: number = 0;
         for (let e of this.EntityList) {
             dx = dy = 0;
@@ -425,17 +471,13 @@ class Level {
                 ctx.fillStyle = "#FF0000";
             }
             let t: Point = e.components["pos"].value;
-            if (e["player"] || (dx >= -ux && dx <= lx && dy >= -uy && dy <= ly)) {
+            if (e["player"] || this.cells[t.x][t.y].visable) {// (dx >= -ux && dx <= lx && dy >= -uy && dy <= ly)) { // || (e["visible"] && e["visible"].value === true)
                 ctx.drawImage(SpriteSheetCache.spriteSheet("entities").sprites[index],
                     0, 0,
                     16, 16,
                     (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE),
                     (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE),
                     16, 16);
-                // ctx.fillRect(
-                //     (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE),
-                //     (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE),
-                //     GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
                 ctx.fillRect(
                     t.x + (GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width),
                     t.y,
@@ -443,6 +485,9 @@ class Level {
             }
         }
         ctx.globalAlpha = 1.0;
+        for (let c of visableCells) {
+            c.visable = false;
+        }
         this.redraw = true;
     }
 }

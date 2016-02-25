@@ -6,7 +6,7 @@ var Cell = (function () {
         this.tileID = tileID;
         this.entityID = entityID;
         this.itemIDs = itemIDs;
-        this.visable = true;
+        this.visable = false;
         this.discovered = false;
     }
     return Cell;
