@@ -170,6 +170,26 @@ var Level = (function () {
         var step = 1;
         var player = this.EntityList[0];
         var playerPos = player["pos"].value;
+        if (Input.KB.isDown(Input.KB.KEY.NUM_1)) {
+            player["torch"].value = 1;
+            this.redraw = true;
+        }
+        else if (Input.KB.isDown(Input.KB.KEY.NUM_2)) {
+            player["torch"].value = 2;
+            this.redraw = true;
+        }
+        else if (Input.KB.isDown(Input.KB.KEY.NUM_3)) {
+            player["torch"].value = 3;
+            this.redraw = true;
+        }
+        else if (Input.KB.isDown(Input.KB.KEY.NUM_4)) {
+            player["torch"].value = 4;
+            this.redraw = true;
+        }
+        else if (Input.KB.isDown(Input.KB.KEY.NUM_5)) {
+            player["torch"].value = 5;
+            this.redraw = true;
+        }
         if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
             this.timer = 0;
             if (this.cells[playerPos.x - 1][playerPos.y].tileID !== 4) {
@@ -317,8 +337,8 @@ var Level = (function () {
         }
         var VisionPts = [];
         var visableCells = [];
-        var torchStr = 3;
-        for (var d = -torchStr; d <= torchStr; d++) {
+        var torchStr = player["torch"].value;
+        for (var d = -torchStr; d <= torchStr; d += 1) {
             VisionPts[VisionPts.length] = new Point(d, -torchStr);
             VisionPts[VisionPts.length] = new Point(d, torchStr);
             VisionPts[VisionPts.length] = new Point(-torchStr, d);
@@ -327,36 +347,26 @@ var Level = (function () {
         var steps = 0, incX = 0, incY = 0;
         ctx.globalAlpha = 0.1;
         ctx.fillStyle = "#FFFFFF";
-        var px = Math.round((playerPos.x + 0.5) * GAMEINFO.TILESIZE), py = Math.round((playerPos.y + 0.5) * GAMEINFO.TILESIZE);
+        var px = round((playerPos.x + 0.5) * GAMEINFO.TILESIZE, 1), py = round((playerPos.y + 0.5) * GAMEINFO.TILESIZE, 1);
         for (var _b = 0, VisionPts_1 = VisionPts; _b < VisionPts_1.length; _b++) {
             var pt = VisionPts_1[_b];
             var vx = px, vy = py;
-            dx = Math.round((pt.x) * GAMEINFO.TILESIZE);
-            dy = Math.round((pt.y) * GAMEINFO.TILESIZE);
+            dx = round((pt.x) * GAMEINFO.TILESIZE, 1);
+            dy = round((pt.y) * GAMEINFO.TILESIZE, 1);
             if (Math.abs(dx) > Math.abs(dy)) {
                 steps = Math.abs(dx);
             }
             else {
                 steps = Math.abs(dy);
             }
-            incX = dx / steps;
-            incY = dy / steps;
+            incX = round(dx / steps, 1);
+            incY = round(dy / steps, 1);
             var tx = vx, ty = vy;
             for (var v = 0; v < steps; v++) {
-                vx = (vx + incX);
-                vy = (vy + incY);
-                if (incY >= 0) {
-                    ty = Math.ceil(vy / GAMEINFO.TILESIZE) - 1;
-                }
-                else {
-                    ty = Math.floor(vy / GAMEINFO.TILESIZE);
-                }
-                if (incX >= 0) {
-                    tx = Math.ceil(vx / GAMEINFO.TILESIZE) - 1;
-                }
-                else {
-                    tx = Math.floor(vx / GAMEINFO.TILESIZE);
-                }
+                vx = round((vx + incX), 1);
+                vy = round((vy + incY), 1);
+                ty = Math.floor(vy / GAMEINFO.TILESIZE);
+                tx = Math.floor(vx / GAMEINFO.TILESIZE);
                 if (this.cells[tx] && this.cells[tx][ty]) {
                     if (this.cells[tx][ty].tileID === 3 || this.cells[tx][ty].tileID === 4) {
                         break;

@@ -10,7 +10,12 @@ namespace Input {
             UP = 38,
             DOWN = 40,
             ENTER = 13,
-            SPACE = 32
+            SPACE = 32,
+            NUM_1 = 49,
+            NUM_2 = 50,
+            NUM_3 = 51,
+            NUM_4 = 52,
+            NUM_5 = 53
         }
 
         let _isDown: boolean[] = [];

@@ -12,3 +12,10 @@ function shuffle(array) {
     }
     return array;
 }
+function round(num, places) {
+    var pow10 = Math.pow(10, places);
+    var result = num * pow10;
+    result = Math.round(result);
+    result /= pow10;
+    return result;
+}

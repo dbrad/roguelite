@@ -34,6 +34,7 @@ var Game = (function () {
         var player = new ECS.Entity();
         player.addComponent(new ECS.Components.IsPlayer());
         player.addComponent(new ECS.Components.TilePos());
+        player.addComponent(new ECS.Components.TorchStr());
         player["pos"].value.x = this.level.entrance.x;
         player["pos"].value.y = this.level.entrance.y;
         this.level.EntityList.push(player);
@@ -93,6 +94,8 @@ var Game = (function () {
                     this.bufferCtx.fillStyle = "#ffffff";
                     this.level.drawMiniMap(this.bufferCtx);
                     this.level.drawEntities(this.bufferCtx);
+                    this.bufferCtx.fillStyle = "#ffffff";
+                    this.bufferCtx.fillText("Arrow keys to move. 1-5 to play with torch strength.", 10, GAMEINFO.GAME_PIXEL_HEIGHT - 12);
                     this.ctx.fillStyle = "#ffffff";
                     this.ctx.drawImage(this.buffer, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
                     this.level.redraw = false;

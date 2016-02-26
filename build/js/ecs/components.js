@@ -41,5 +41,14 @@ var ECS;
             return TilePos;
         }(Component));
         Components.TilePos = TilePos;
+        var TorchStr = (function (_super) {
+            __extends(TorchStr, _super);
+            function TorchStr() {
+                _super.call(this, "torch");
+                this.value = 3;
+            }
+            return TorchStr;
+        }(Component));
+        Components.TorchStr = TorchStr;
     })(Components = ECS.Components || (ECS.Components = {}));
 })(ECS || (ECS = {}));

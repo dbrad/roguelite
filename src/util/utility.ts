@@ -19,3 +19,10 @@ function shuffle(array: any[]): any[] {
 
     return array;
 }
+function round(num: number, places: number): number {
+    var pow10 = Math.pow(10, places);
+    var result = num * pow10;
+    result = Math.round(result);
+    result /= pow10;
+    return result;
+}

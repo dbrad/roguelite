@@ -60,6 +60,7 @@ class Game {
         let player = new ECS.Entity();
         player.addComponent(new ECS.Components.IsPlayer());
         player.addComponent(new ECS.Components.TilePos());
+        player.addComponent(new ECS.Components.TorchStr());
 
         player["pos"].value.x = this.level.entrance.x;
         player["pos"].value.y = this.level.entrance.y;
@@ -145,6 +146,9 @@ class Game {
 
                     // draw the entities, also move this to a world class?
                     this.level.drawEntities(this.bufferCtx);
+
+                    this.bufferCtx.fillStyle = "#ffffff";
+                    this.bufferCtx.fillText("Arrow keys to move. 1-5 to play with torch strength.", 10, GAMEINFO.GAME_PIXEL_HEIGHT - 12);
 
                     // draw the offscreen canvas to the onscreen canvas
                     this.ctx.fillStyle = "#ffffff";

@@ -25,5 +25,11 @@ namespace ECS {
                 this.value = new Point(0, 0);
             }
         }
+        export class TorchStr extends Component<number> {
+            constructor() {
+                super("torch");
+                this.value = 3;
+            }
+        }
     }
 }

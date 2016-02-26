@@ -227,6 +227,23 @@ class Level {
         let player: ECS.Entity = this.EntityList[0];
         let playerPos: Point = player["pos"].value;
 
+        if (Input.KB.isDown(Input.KB.KEY.NUM_1)) {
+            player["torch"].value = 1;
+            this.redraw = true;
+        } else if (Input.KB.isDown(Input.KB.KEY.NUM_2)) {
+            player["torch"].value = 2;
+            this.redraw = true;
+        } else if (Input.KB.isDown(Input.KB.KEY.NUM_3)) {
+            player["torch"].value = 3;
+            this.redraw = true;
+        } else if (Input.KB.isDown(Input.KB.KEY.NUM_4)) {
+            player["torch"].value = 4;
+            this.redraw = true;
+        } else if (Input.KB.isDown(Input.KB.KEY.NUM_5)) {
+            player["torch"].value = 5;
+            this.redraw = true;
+        }
+
         if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
             this.timer = 0;
             if (this.cells[playerPos.x - 1][playerPos.y].tileID !== 4) {
@@ -389,8 +406,8 @@ class Level {
 
         let VisionPts: Point[] = [];
         let visableCells: Cell[] = [];
-        let torchStr = 3;
-        for (let d = -torchStr; d <= torchStr; d++) {
+        let torchStr = player["torch"].value; //3.0;
+        for (let d = -torchStr; d <= torchStr; d += 1) {
             VisionPts[VisionPts.length] = new Point(d, -torchStr);
             VisionPts[VisionPts.length] = new Point(d, torchStr);
             VisionPts[VisionPts.length] = new Point(-torchStr, d);
@@ -399,13 +416,13 @@ class Level {
         let steps: number = 0, incX: number = 0, incY: number = 0;
         ctx.globalAlpha = 0.1;
         ctx.fillStyle = "#FFFFFF";
-        let px: number = Math.round((playerPos.x + 0.5) * GAMEINFO.TILESIZE),
-            py: number = Math.round((playerPos.y + 0.5) * GAMEINFO.TILESIZE);
+        let px: number = round((playerPos.x + 0.5) * GAMEINFO.TILESIZE, 1),
+            py: number = round((playerPos.y + 0.5) * GAMEINFO.TILESIZE, 1);
         for (let pt of VisionPts) {
             let vx: number = px, vy: number = py;
 
-            dx = Math.round((pt.x) * GAMEINFO.TILESIZE);
-            dy = Math.round((pt.y) * GAMEINFO.TILESIZE);
+            dx = round((pt.x) * GAMEINFO.TILESIZE, 1);
+            dy = round((pt.y) * GAMEINFO.TILESIZE, 1);
 
             if (Math.abs(dx) > Math.abs(dy)) {
                 steps = Math.abs(dx);
@@ -413,24 +430,30 @@ class Level {
                 steps = Math.abs(dy);
             }
 
-            incX = dx / steps;
-            incY = dy / steps;
+            incX = round(dx / steps, 1);
+            incY = round(dy / steps, 1);
 
             let tx: number = vx, ty: number = vy;
             for (let v = 0; v < steps; v++) {
-                vx = (vx + incX);
-                vy = (vy + incY);
-                if (incY >= 0) { // looking down
-                    ty = Math.ceil(vy / GAMEINFO.TILESIZE) - 1;
-                } else { // looking up
-                    ty = Math.floor(vy / GAMEINFO.TILESIZE);
-                }
-                if (incX >= 0) { // looking right
-                    tx = Math.ceil(vx / GAMEINFO.TILESIZE) - 1;
-                } else { // looking left
-                    tx = Math.floor(vx / GAMEINFO.TILESIZE);
-                }
-
+                vx = round((vx + incX), 1);
+                vy = round((vy + incY), 1);
+                // if (incY > 0) { // looking down
+                //
+                // } else if (incY === 0) { // looking straight right or left
+                //     ty = Math.floor(vy / GAMEINFO.TILESIZE);
+                // } else { // looking up
+                //     ty = Math.floor(vy / GAMEINFO.TILESIZE);
+                // }
+                //
+                // if (incX > 0) { // looking right
+                //     tx = Math.floor(vx / GAMEINFO.TILESIZE);
+                // } else if (incX === 0) { // looking straight up or down
+                //     tx = Math.floor(vx / GAMEINFO.TILESIZE);
+                // } else { // looking left
+                //
+                // }
+                ty = Math.floor(vy / GAMEINFO.TILESIZE);
+                tx = Math.floor(vx / GAMEINFO.TILESIZE);
 
                 if (this.cells[tx] && this.cells[tx][ty]) {
                     if (this.cells[tx][ty].tileID === 3 || this.cells[tx][ty].tileID === 4) {
@@ -448,7 +471,7 @@ class Level {
             }
             // ctx.globalAlpha = 1.0;
             // ctx.strokeStyle = "#FFF";
-            // ctx.lineWidth = 2;
+            // ctx.lineWidth = 1;
             // ctx.beginPath();
             // ctx.moveTo(Math.round(px - (this.camera.xOffset * GAMEINFO.TILESIZE)), Math.round(py - (this.camera.yOffset * GAMEINFO.TILESIZE)));
             // ctx.lineTo(Math.round(vx - (this.camera.xOffset * GAMEINFO.TILESIZE)), Math.round(vy - (this.camera.yOffset * GAMEINFO.TILESIZE)));
