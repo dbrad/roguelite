@@ -148,7 +148,7 @@ class Game {
                     this.level.drawEntities(this.bufferCtx);
 
                     this.bufferCtx.fillStyle = "#ffffff";
-                    this.bufferCtx.fillText("Arrow keys to move. 1-5 to play with torch strength.", 10, GAMEINFO.GAME_PIXEL_HEIGHT - 12);
+                    this.bufferCtx.fillText("Arrow keys to move.", 10, GAMEINFO.GAME_PIXEL_HEIGHT - 12);
 
                     // draw the offscreen canvas to the onscreen canvas
                     this.ctx.fillStyle = "#ffffff";

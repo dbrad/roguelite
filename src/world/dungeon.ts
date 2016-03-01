@@ -16,8 +16,8 @@ class Dungeon extends Level {
 
         this.rooms = [];
 
-        for (let x = 0; x < this.width; x++) {
-            for (let y = 0; y < this.height; y++) {
+        for (let x = 0; x < this._width; x++) {
+            for (let y = 0; y < this._height; y++) {
                 if (this.cells[x] === undefined) {
                     this.cells[x] = [];
                 }
@@ -69,12 +69,12 @@ class Dungeon extends Level {
 
         if (feature === "R") {
             do {
-                room.w = randomInt(5, this.width / 5);
+                room.w = randomInt(5, this._width / 5);
                 room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
 
-                room.h = randomInt(5, this.height / 5);
+                room.h = randomInt(5, this._height / 5);
                 room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
-            } while (room.w * room.h > (this.width * this.height) / 4);
+            } while (room.w * room.h > (this._width * this._height) / 4);
         } else if (feature === "C") {
             room.w = (p.w === WALL.N || p.w === WALL.S) ? 3 : randomInt(5, 9); // this.width / 4);
             room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
@@ -121,8 +121,8 @@ class Dungeon extends Level {
         let feature: number = randomInt(0, 100);
         let room: Room = this.makeRoom();
 
-        room.x = randomInt(1, Math.floor(this.width - room.w) - 1);
-        room.y = randomInt(1, Math.floor(this.height - room.h) - 1);
+        room.x = randomInt(1, Math.floor(this._width - room.w) - 1);
+        room.y = randomInt(1, Math.floor(this._height - room.h) - 1);
         roomStack[roomStack.length] = room;
         this.addRoom(room);
         this.rooms.push(room);
@@ -176,8 +176,8 @@ class Dungeon extends Level {
         }
         let lastRoom = this.rooms[this.rooms.length - 1];
         this.addTile({ x: lastRoom.x + Math.floor(lastRoom.w / 2), y: lastRoom.y + Math.floor(lastRoom.h / 2) }, 6);
-        for (let x = 0; x < this.width; x++) {
-            for (let y = 0; y < this.height; y++) {
+        for (let x = 0; x < this._width; x++) {
+            for (let y = 0; y < this._height; y++) {
                 if (this.cells[x][y].tileID === 2) {
                     for (let ix = -1; ix <= 1; ix++) {
                         for (let iy = -1; iy <= 1; iy++) {

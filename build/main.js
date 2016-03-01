@@ -304,6 +304,70 @@ var ECS;
     ECS.Entity = Entity;
 })(ECS || (ECS = {}));
 
+var ECS;
+(function (ECS) {
+    var camThresh = 12;
+    var Systems;
+    (function (Systems) {
+        function InputControl(e, level) {
+            var entityPosition = e["pos"].value;
+            var movementTaken = false;
+            if (Input.KB.wasDown(Input.KB.KEY.LEFT)) {
+                if (level.cells[entityPosition.x - 1][entityPosition.y].tileID !== 4) {
+                    entityPosition.x--;
+                    if (entityPosition.x < level.camera.xOffset + camThresh) {
+                        level.camera.xOffset--;
+                        if (level.camera.xOffset <= 0) {
+                            level.camera.xOffset = 0;
+                        }
+                    }
+                }
+                movementTaken = true;
+            }
+            else if (Input.KB.wasDown(Input.KB.KEY.RIGHT)) {
+                if (level.cells[entityPosition.x + 1][entityPosition.y].tileID !== 4) {
+                    entityPosition.x++;
+                    if (entityPosition.x >= level.camera.xOffset + level.camera.width - camThresh) {
+                        level.camera.xOffset++;
+                        if (level.camera.xOffset + level.camera.width >= level.width) {
+                            level.camera.xOffset = (level.width - level.camera.width);
+                        }
+                    }
+                }
+                movementTaken = true;
+            }
+            else if (Input.KB.wasDown(Input.KB.KEY.UP)) {
+                if (level.cells[entityPosition.x][entityPosition.y - 1].tileID !== 4) {
+                    entityPosition.y--;
+                    if (entityPosition.y < level.camera.yOffset + (camThresh - 3)) {
+                        level.camera.yOffset--;
+                        if (level.camera.yOffset <= 0) {
+                            level.camera.yOffset = 0;
+                        }
+                    }
+                }
+                movementTaken = true;
+            }
+            else if (Input.KB.wasDown(Input.KB.KEY.DOWN)) {
+                if (level.cells[entityPosition.x][entityPosition.y + 1].tileID !== 4) {
+                    entityPosition.y++;
+                    if (entityPosition.y >= level.camera.yOffset + level.camera.height - (camThresh - 3)) {
+                        level.camera.yOffset++;
+                        if (level.camera.yOffset + level.camera.height >= level.height) {
+                            level.camera.yOffset = (level.height - level.camera.height);
+                        }
+                    }
+                }
+                movementTaken = true;
+            }
+            return movementTaken;
+        }
+        Systems.InputControl = InputControl;
+        function AIControl(e, level, player) {
+        }
+        Systems.AIControl = AIControl;
+    })(Systems = ECS.Systems || (ECS.Systems = {}));
+})(ECS || (ECS = {}));
 
 var TileSet = (function () {
     function TileSet() {
@@ -338,8 +402,8 @@ var Level = (function () {
         this.camThresh = 12;
         this.timer = 0;
         this.cells = [];
-        this.width = width;
-        this.height = height;
+        this._width = width;
+        this._height = height;
         this.camera = camera;
         this.EntityList = [];
         this.MiniMap = document.createElement("canvas");
@@ -353,26 +417,40 @@ var Level = (function () {
         this.renderCache.getContext("2d").mozImageSmoothingEnabled = false;
         this.renderCache.getContext("2d").imageSmoothingEnabled = false;
     }
+    Object.defineProperty(Level.prototype, "height", {
+        get: function () {
+            return this._height;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Level.prototype, "width", {
+        get: function () {
+            return this._width;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Level.prototype.snapCameraToLevel = function () {
         if (this.camera.xOffset <= 0) {
             this.camera.xOffset = 0;
         }
-        if (this.camera.xOffset + this.camera.width >= this.width) {
-            this.camera.xOffset = (this.width - this.camera.width);
+        if (this.camera.xOffset + this.camera.width >= this._width) {
+            this.camera.xOffset = (this._width - this.camera.width);
         }
         if (this.camera.yOffset <= 0) {
             this.camera.yOffset = 0;
         }
-        if (this.camera.yOffset + this.camera.height >= this.height) {
-            this.camera.yOffset = (this.height - this.camera.height);
+        if (this.camera.yOffset + this.camera.height >= this._height) {
+            this.camera.yOffset = (this._height - this.camera.height);
         }
     };
     Level.prototype.partOfRoom = function (cell) {
         return (cell.tileID === 2);
     };
     Level.prototype.floodDiscover = function (x, y) {
-        var maxX = this.width - 1;
-        var maxY = this.height - 1;
+        var maxX = this._width - 1;
+        var maxY = this._height - 1;
         var stack = [];
         var index = 0;
         if (!stack[index]) {
@@ -425,8 +503,8 @@ var Level = (function () {
                 stack[index].y = y + 1;
             }
         }
-        for (var x_1 = 0; x_1 < this.width; x_1++) {
-            for (var y_1 = 0; y_1 < this.height; y_1++) {
+        for (var x_1 = 0; x_1 < this._width; x_1++) {
+            for (var y_1 = 0; y_1 < this._height; y_1++) {
                 if (this.cells[x_1][y_1].tileID === 2 && this.cells[x_1][y_1].discovered) {
                     for (var ix = -1; ix <= 1; ix++) {
                         for (var iy = -1; iy <= 1; iy++) {
@@ -440,8 +518,8 @@ var Level = (function () {
         }
     };
     Level.prototype.floodFill = function (x, y, target, fill) {
-        var maxX = this.width - 1;
-        var maxY = this.height - 1;
+        var maxX = this._width - 1;
+        var maxY = this._height - 1;
         var stack = [];
         var index = 0;
         if (!stack[index]) {
@@ -500,79 +578,23 @@ var Level = (function () {
         if (this.timer < 75)
             return;
         var step = 1;
-        var player = this.EntityList[0];
+        var player;
+        for (var _i = 0, _a = this.EntityList; _i < _a.length; _i++) {
+            var e = _a[_i];
+            if (e["player"]) {
+                player = e;
+            }
+        }
         var playerPos = player["pos"].value;
-        if (Input.KB.isDown(Input.KB.KEY.NUM_1)) {
-            player["torch"].value = 1;
-            this.redraw = true;
-        }
-        else if (Input.KB.isDown(Input.KB.KEY.NUM_2)) {
-            player["torch"].value = 2;
-            this.redraw = true;
-        }
-        else if (Input.KB.isDown(Input.KB.KEY.NUM_3)) {
-            player["torch"].value = 3;
-            this.redraw = true;
-        }
-        else if (Input.KB.isDown(Input.KB.KEY.NUM_4)) {
-            player["torch"].value = 4;
-            this.redraw = true;
-        }
-        else if (Input.KB.isDown(Input.KB.KEY.NUM_5)) {
-            player["torch"].value = 5;
-            this.redraw = true;
-        }
-        if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
-            this.timer = 0;
-            if (this.cells[playerPos.x - 1][playerPos.y].tileID !== 4) {
-                playerPos.x--;
-                if (playerPos.x < this.camera.xOffset + this.camThresh) {
-                    this.camera.xOffset -= step;
-                    if (this.camera.xOffset <= 0) {
-                        this.camera.xOffset = 0;
-                    }
+        if (ECS.Systems.InputControl(player, this)) {
+            for (var _b = 0, _c = this.EntityList; _b < _c.length; _b++) {
+                var e = _c[_b];
+                if (e["enemy"]) {
+                    ECS.Systems.AIControl(e, this, player);
                 }
             }
             this.redraw = true;
-        }
-        else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
             this.timer = 0;
-            if (this.cells[playerPos.x + 1][playerPos.y].tileID !== 4) {
-                playerPos.x++;
-                if (playerPos.x >= this.camera.xOffset + this.camera.width - this.camThresh) {
-                    this.camera.xOffset += step;
-                    if (this.camera.xOffset + this.camera.width >= this.width) {
-                        this.camera.xOffset = (this.width - this.camera.width);
-                    }
-                }
-            }
-            this.redraw = true;
-        }
-        if (Input.KB.isDown(Input.KB.KEY.UP)) {
-            this.timer = 0;
-            if (this.cells[playerPos.x][playerPos.y - 1].tileID !== 4) {
-                playerPos.y--;
-                if (playerPos.y < this.camera.yOffset + (this.camThresh - 3)) {
-                    this.camera.yOffset -= step;
-                    if (this.camera.yOffset <= 0) {
-                        this.camera.yOffset = 0;
-                    }
-                }
-            }
-            this.redraw = true;
-        }
-        else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
-            this.timer = 0;
-            if (this.cells[playerPos.x][playerPos.y + 1].tileID !== 4) {
-                playerPos.y++;
-                if (playerPos.y >= this.camera.yOffset + this.camera.height - (this.camThresh - 3)) {
-                    this.camera.yOffset += step;
-                    if (this.camera.yOffset + this.camera.height >= this.height) {
-                        this.camera.yOffset = (this.height - this.camera.height);
-                    }
-                }
-            }
-            this.redraw = true;
         }
         if (!this.cells[playerPos.x][playerPos.y].discovered) {
             this.floodDiscover(playerPos.x, playerPos.y);
@@ -610,8 +632,8 @@ var Level = (function () {
         return result;
     };
     Level.prototype.render = function (ctx, tSize) {
-        for (var tx = 0, x = 0; tx < this.width; tx++) {
-            for (var ty = 0, y = 0; ty < this.height; ty++) {
+        for (var tx = 0, x = 0; tx < this._width; tx++) {
+            for (var ty = 0, y = 0; ty < this._height; ty++) {
                 var tCell = null;
                 if (!this.cells[tx] || !this.cells[tx][ty]) {
                     ctx.fillStyle = "#000000";
@@ -654,7 +676,7 @@ var Level = (function () {
         ctx.drawImage(this.MiniMap, 0, 0, this.MiniMap.width, this.MiniMap.height, GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width, 0, this.MiniMap.width, this.MiniMap.height);
         ctx.strokeStyle = "#FFF";
         ctx.lineWidth = 2;
-        ctx.strokeRect(GAMEINFO.GAME_PIXEL_WIDTH - this.width + this.camera.xOffset, this.camera.yOffset, this.camera.width, this.camera.height);
+        ctx.strokeRect(GAMEINFO.GAME_PIXEL_WIDTH - this._width + this.camera.xOffset, this.camera.yOffset, this.camera.width, this.camera.height);
     };
     Level.prototype.drawEntities = function (ctx) {
         var player;
@@ -679,26 +701,32 @@ var Level = (function () {
         var steps = 0, incX = 0, incY = 0;
         ctx.globalAlpha = 0.1;
         ctx.fillStyle = "#FFFFFF";
-        var px = round((playerPos.x + 0.5) * GAMEINFO.TILESIZE, 1), py = round((playerPos.y + 0.5) * GAMEINFO.TILESIZE, 1);
+        var px = round((playerPos.x + 0.5) * GAMEINFO.TILESIZE, 2), py = round((playerPos.y + 0.5) * GAMEINFO.TILESIZE, 2);
         for (var _b = 0, VisionPts_1 = VisionPts; _b < VisionPts_1.length; _b++) {
             var pt = VisionPts_1[_b];
             var vx = px, vy = py;
-            dx = round((pt.x) * GAMEINFO.TILESIZE, 1);
-            dy = round((pt.y) * GAMEINFO.TILESIZE, 1);
+            dx = round((pt.x) * GAMEINFO.TILESIZE, 2);
+            dy = round((pt.y) * GAMEINFO.TILESIZE, 2);
             if (Math.abs(dx) > Math.abs(dy)) {
                 steps = Math.abs(dx);
             }
             else {
                 steps = Math.abs(dy);
             }
-            incX = round(dx / steps, 1);
-            incY = round(dy / steps, 1);
-            var tx = vx, ty = vy;
+            incX = round(dx / steps, 2);
+            incY = round(dy / steps, 2);
+            if (incX < 0 && incY > 0) {
+                vy -= 1;
+            }
+            else if (incX > 0 && incY < 0) {
+                vx -= 1;
+            }
+            var tx = 0, ty = 0;
             for (var v = 0; v < steps; v++) {
-                vx = round((vx + incX), 1);
-                vy = round((vy + incY), 1);
-                ty = Math.floor(vy / GAMEINFO.TILESIZE);
+                vx = round((vx + incX), 2);
+                vy = round((vy + incY), 2);
                 tx = Math.floor(vx / GAMEINFO.TILESIZE);
+                ty = Math.floor(vy / GAMEINFO.TILESIZE);
                 if (this.cells[tx] && this.cells[tx][ty]) {
                     if (this.cells[tx][ty].tileID === 3 || this.cells[tx][ty].tileID === 4) {
                         break;
@@ -751,12 +779,12 @@ var Cave = (function (_super) {
     __extends(Cave, _super);
     function Cave(width, height, camera) {
         _super.call(this, width, height, camera);
-        for (var x = 0; x < this.width; x++) {
-            for (var y = 0; y < this.height; y++) {
+        for (var x = 0; x < this._width; x++) {
+            for (var y = 0; y < this._height; y++) {
                 if (this.cells[x] === undefined) {
                     this.cells[x] = [];
                 }
-                if ((Math.random() * 100) < 50 || (x === 0 || x === (this.width - 1) || y === 0 || y === (this.height - 1))) {
+                if ((Math.random() * 100) < 50 || (x === 0 || x === (this._width - 1) || y === 0 || y === (this._height - 1))) {
                     this.cells[x][y] = new Cell(0);
                 }
                 else {
@@ -764,23 +792,23 @@ var Cave = (function (_super) {
                 }
             }
         }
-        for (var x = 5; x < this.width - 5; x++) {
-            this.cells[x][(this.height / 2) - 1].tileID = 1;
-            this.cells[x][(this.height / 2)].tileID = 1;
-            this.cells[x][(this.height / 2) + 1].tileID = 1;
+        for (var x = 5; x < this._width - 5; x++) {
+            this.cells[x][(this._height / 2) - 1].tileID = 1;
+            this.cells[x][(this._height / 2)].tileID = 1;
+            this.cells[x][(this._height / 2) + 1].tileID = 1;
         }
-        for (var y = 5; y < this.width - 5; y++) {
-            this.cells[(this.height / 2) - 1][y].tileID = 1;
-            this.cells[(this.height / 2)][y].tileID = 1;
-            this.cells[(this.height / 2) + 1][y].tileID = 1;
+        for (var y = 5; y < this._width - 5; y++) {
+            this.cells[(this._height / 2) - 1][y].tileID = 1;
+            this.cells[(this._height / 2)][y].tileID = 1;
+            this.cells[(this._height / 2) + 1][y].tileID = 1;
         }
         this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
         this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
         this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
         this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
         this.cellularAutomata([5, 6, 7, 8], [4, 5, 6, 7, 8]);
-        for (var x = 1; x < this.width - 1; x++) {
-            for (var y = 1; y < this.height - 1; y++) {
+        for (var x = 1; x < this._width - 1; x++) {
+            for (var y = 1; y < this._height - 1; y++) {
                 var tCell = this.cells[x][y];
                 var liveN = this.getLiveNeighbors(x, y);
                 if (tCell.tileID === 0 && liveN < 2) {
@@ -791,14 +819,14 @@ var Cave = (function (_super) {
                 }
             }
         }
-        var mx = (this.width / 2);
-        var my = (this.height / 2);
+        var mx = (this._width / 2);
+        var my = (this._height / 2);
         while (this.cells[mx][my].tileID !== 1) {
             mx++;
         }
         this.floodFill(mx, my, 1, 2);
-        for (var x = 1; x < this.width - 1; x++) {
-            for (var y = 1; y < this.height - 1; y++) {
+        for (var x = 1; x < this._width - 1; x++) {
+            for (var y = 1; y < this._height - 1; y++) {
                 if (this.cells[x][y].tileID === 1) {
                     this.cells[x][y].tileID = 0;
                 }
@@ -808,11 +836,11 @@ var Cave = (function (_super) {
     Cave.prototype.getLiveNeighbors = function (x, y) {
         var count = 0;
         for (var nx = x - 1; nx <= x + 1; nx++) {
-            if (nx < 0 || nx > this.width) {
+            if (nx < 0 || nx > this._width) {
                 continue;
             }
             for (var ny = y - 1; ny <= y + 1; ny++) {
-                if (ny < 0 || ny > this.height) {
+                if (ny < 0 || ny > this._height) {
                     continue;
                 }
                 if (!(nx === x && ny === y)) {
@@ -823,8 +851,8 @@ var Cave = (function (_super) {
         return 8 - count;
     };
     Cave.prototype.cellularAutomata = function (B, S) {
-        for (var x = 1; x < this.width - 1; x++) {
-            for (var y = 1; y < this.height - 1; y++) {
+        for (var x = 1; x < this._width - 1; x++) {
+            for (var y = 1; y < this._height - 1; y++) {
                 var tCell = this.cells[x][y];
                 var liveN = this.getLiveNeighbors(x, y);
                 if (tCell.tileID === 1) {
@@ -901,8 +929,8 @@ var Dungeon = (function (_super) {
     function Dungeon(width, height, camera) {
         _super.call(this, width, height, camera);
         this.rooms = [];
-        for (var x = 0; x < this.width; x++) {
-            for (var y = 0; y < this.height; y++) {
+        for (var x = 0; x < this._width; x++) {
+            for (var y = 0; y < this._height; y++) {
                 if (this.cells[x] === undefined) {
                     this.cells[x] = [];
                 }
@@ -956,11 +984,11 @@ var Dungeon = (function (_super) {
         room.roomType = feature;
         if (feature === "R") {
             do {
-                room.w = randomInt(5, this.width / 5);
+                room.w = randomInt(5, this._width / 5);
                 room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
-                room.h = randomInt(5, this.height / 5);
+                room.h = randomInt(5, this._height / 5);
                 room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
-            } while (room.w * room.h > (this.width * this.height) / 4);
+            } while (room.w * room.h > (this._width * this._height) / 4);
         }
         else if (feature === "C") {
             room.w = (p.w === WALL.N || p.w === WALL.S) ? 3 : randomInt(5, 9);
@@ -1001,8 +1029,8 @@ var Dungeon = (function (_super) {
         var attempts = 0;
         var feature = randomInt(0, 100);
         var room = this.makeRoom();
-        room.x = randomInt(1, Math.floor(this.width - room.w) - 1);
-        room.y = randomInt(1, Math.floor(this.height - room.h) - 1);
+        room.x = randomInt(1, Math.floor(this._width - room.w) - 1);
+        room.y = randomInt(1, Math.floor(this._height - room.h) - 1);
         roomStack[roomStack.length] = room;
         this.addRoom(room);
         this.rooms.push(room);
@@ -1054,8 +1082,8 @@ var Dungeon = (function (_super) {
         }
         var lastRoom = this.rooms[this.rooms.length - 1];
         this.addTile({ x: lastRoom.x + Math.floor(lastRoom.w / 2), y: lastRoom.y + Math.floor(lastRoom.h / 2) }, 6);
-        for (var x = 0; x < this.width; x++) {
-            for (var y = 0; y < this.height; y++) {
+        for (var x = 0; x < this._width; x++) {
+            for (var y = 0; y < this._height; y++) {
                 if (this.cells[x][y].tileID === 2) {
                     for (var ix = -1; ix <= 1; ix++) {
                         for (var iy = -1; iy <= 1; iy++) {
@@ -1168,7 +1196,7 @@ var Game = (function () {
                     this.level.drawMiniMap(this.bufferCtx);
                     this.level.drawEntities(this.bufferCtx);
                     this.bufferCtx.fillStyle = "#ffffff";
-                    this.bufferCtx.fillText("Arrow keys to move. 1-5 to play with torch strength.", 10, GAMEINFO.GAME_PIXEL_HEIGHT - 12);
+                    this.bufferCtx.fillText("Arrow keys to move.", 10, GAMEINFO.GAME_PIXEL_HEIGHT - 12);
                     this.ctx.fillStyle = "#ffffff";
                     this.ctx.drawImage(this.buffer, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
                     this.level.redraw = false;

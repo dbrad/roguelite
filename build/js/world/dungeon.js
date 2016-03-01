@@ -8,8 +8,8 @@ var Dungeon = (function (_super) {
     function Dungeon(width, height, camera) {
         _super.call(this, width, height, camera);
         this.rooms = [];
-        for (var x = 0; x < this.width; x++) {
-            for (var y = 0; y < this.height; y++) {
+        for (var x = 0; x < this._width; x++) {
+            for (var y = 0; y < this._height; y++) {
                 if (this.cells[x] === undefined) {
                     this.cells[x] = [];
                 }
@@ -63,11 +63,11 @@ var Dungeon = (function (_super) {
         room.roomType = feature;
         if (feature === "R") {
             do {
-                room.w = randomInt(5, this.width / 5);
+                room.w = randomInt(5, this._width / 5);
                 room.w = room.w % 2 === 0 ? room.w - 1 : room.w;
-                room.h = randomInt(5, this.height / 5);
+                room.h = randomInt(5, this._height / 5);
                 room.h = room.h % 2 === 0 ? room.h - 1 : room.h;
-            } while (room.w * room.h > (this.width * this.height) / 4);
+            } while (room.w * room.h > (this._width * this._height) / 4);
         }
         else if (feature === "C") {
             room.w = (p.w === WALL.N || p.w === WALL.S) ? 3 : randomInt(5, 9);
@@ -108,8 +108,8 @@ var Dungeon = (function (_super) {
         var attempts = 0;
         var feature = randomInt(0, 100);
         var room = this.makeRoom();
-        room.x = randomInt(1, Math.floor(this.width - room.w) - 1);
-        room.y = randomInt(1, Math.floor(this.height - room.h) - 1);
+        room.x = randomInt(1, Math.floor(this._width - room.w) - 1);
+        room.y = randomInt(1, Math.floor(this._height - room.h) - 1);
         roomStack[roomStack.length] = room;
         this.addRoom(room);
         this.rooms.push(room);
@@ -161,8 +161,8 @@ var Dungeon = (function (_super) {
         }
         var lastRoom = this.rooms[this.rooms.length - 1];
         this.addTile({ x: lastRoom.x + Math.floor(lastRoom.w / 2), y: lastRoom.y + Math.floor(lastRoom.h / 2) }, 6);
-        for (var x = 0; x < this.width; x++) {
-            for (var y = 0; y < this.height; y++) {
+        for (var x = 0; x < this._width; x++) {
+            for (var y = 0; y < this._height; y++) {
                 if (this.cells[x][y].tileID === 2) {
                     for (var ix = -1; ix <= 1; ix++) {
                         for (var iy = -1; iy <= 1; iy++) {
