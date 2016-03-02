@@ -30,6 +30,7 @@
         "src/system/game_config.ts",
         "src/system/game.ts",
         "src/system/input.ts",
+        "src/system/textlog.ts",
         "src/types/types.ts",
         "src/util/utility.ts",
         "src/world/cave.ts",
@@ -37,7 +38,8 @@
         "src/world/dungeon.ts",
         "src/world/game_objs.ts",
         "src/world/level.ts",
-        "src/world/room.ts"
+        "src/world/room.ts",
+        "src/world/world.ts"
     ],
     "formatCodeOptions": {
         "indentSize": 4,

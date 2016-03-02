@@ -20,7 +20,7 @@ class Game {
     private ctx: Context2D;
     private bufferCtx: Context2D;
 
-    public level: Level;
+    public world: World;
 
     constructor(screen: HTMLCanvasElement) {
         console.log("Setting up screen");
@@ -52,31 +52,10 @@ class Game {
         SpriteSheetCache.spriteSheet("tiles").reColourize(3, 140, 100, 60);
         // most of this will move to the world class
         // will load a saved world or make a new world from main menu
-        this.level = new Dungeon(160, 160, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
-        this.level.floodDiscover(this.level.entrance.x, this.level.entrance.y);
-        this.level.camera.xOffset = this.level.entrance.x - (this.level.camera.width / 2);
-        this.level.camera.yOffset = this.level.entrance.y - (this.level.camera.height / 2);
-        this.level.snapCameraToLevel();
-        let player = new ECS.Entity();
-        player.addComponent(new ECS.Components.IsPlayer());
-        player.addComponent(new ECS.Components.TilePos());
-        player.addComponent(new ECS.Components.TorchStr());
+        this.world = new World();
 
-        player["pos"].value.x = this.level.entrance.x;
-        player["pos"].value.y = this.level.entrance.y;
-        this.level.EntityList.push(player);
-
-        for (let i = 0; i < 20; i++) {
-            let enemy = new ECS.Entity();
-            enemy.addComponent(new ECS.Components.IsEnemy());
-            enemy.addComponent(new ECS.Components.TilePos());
-            do {
-                enemy["pos"].value.x = randomInt(0, 159);
-                enemy["pos"].value.y = randomInt(0, 159);
-            } while (this.level.cells[enemy["pos"].value.x][enemy["pos"].value.y].tileID !== 2);
-            this.level.EntityList.push(enemy);
-        }
         this.state = "MainMenu";
+        TextLog.AddLog("Arrow keys to move.");
     }
 
     /** Update */
@@ -94,7 +73,7 @@ class Game {
                     if (delta < 0) { delta = 0; }
                     this.deltaPaused = 0;
                 }
-                this.level.update(delta);
+                this.world.update(delta);
                 break;
             case "GamePause":
                 break;
@@ -116,7 +95,7 @@ class Game {
                 // this.mainmenu.draw();
                 break;
             case "Game":
-                if (this.clearScreen || this.level.redraw) {
+                if (this.clearScreen || this.world.redraw) {
                     this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
                     this.bufferCtx.clearRect(0, 0, this.screen.width, this.screen.height);
                     this.clearScreen = false;
@@ -127,37 +106,16 @@ class Game {
                  * use a "this.world.draw(this.bufferctx);" instead of indivdual calls here.
                  * this manager will likely keep a history of live levels for backtracking and such
                  */
-                if (this.level.redraw) {
-                    // draw (and maybe re-render) the level, move this to a world class?
-                    this.bufferCtx.fillStyle = "#ffffff";
-                    this.level.draw(this.bufferCtx);
-
-                    // place holder for textlog
-                    this.bufferCtx.fillStyle = "#000000";
-                    this.bufferCtx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
-
-                    // place holder for sidebar
-                    this.bufferCtx.fillStyle = "#000000";
-                    this.bufferCtx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
-
-                    this.bufferCtx.fillStyle = "#ffffff";
-                    // draw the minimap, also move this to a world class?
-                    this.level.drawMiniMap(this.bufferCtx);
-
-                    // draw the entities, also move this to a world class?
-                    this.level.drawEntities(this.bufferCtx);
-
-                    this.bufferCtx.fillStyle = "#ffffff";
-                    this.bufferCtx.fillText("Arrow keys to move.", 10, GAMEINFO.GAME_PIXEL_HEIGHT - 12);
-
-                    // draw the offscreen canvas to the onscreen canvas
+                if (this.world.redraw) {
+                    this.world.draw(this.bufferCtx);
                     this.ctx.fillStyle = "#ffffff";
                     this.ctx.drawImage(
                         this.buffer,
                         0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT,
                         0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
-                    this.level.redraw = false;
+                    this.world.redraw = false;
                 }
+
                 break;
             case "GamePause":
                 if (this.change) {
@@ -216,7 +174,7 @@ class Game {
             this.change = this.clearScreen = true;
             this.deltaPaused = performance.now() - this.timePaused;
             this.timePaused = 0;
-            this.level.redraw = true;
+            this.world.redraw = true;
         }
     }
 }

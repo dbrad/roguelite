@@ -28,7 +28,13 @@ namespace ECS {
         export class TorchStr extends Component<number> {
             constructor() {
                 super("torch");
-                this.value = 3;
+                this.value = 5;
+            }
+        }
+        export class Alive extends Component<boolean> {
+            constructor() {
+                super("alive");
+                this.value = true;
             }
         }
     }

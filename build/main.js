@@ -81,6 +81,26 @@ var Camera = (function () {
     return Camera;
 }());
 
+var TextLog;
+(function (TextLog) {
+    var LogHistory = [];
+    var bottomIndex = 0;
+    function AddLog(log) {
+        LogHistory[LogHistory.length] = log;
+        if (LogHistory.length >= 5)
+            bottomIndex++;
+    }
+    TextLog.AddLog = AddLog;
+    function DrawLog(ctx) {
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "12px Monospace";
+        for (var i = LogHistory.length - 1; i >= 0 && i >= LogHistory.length - 5; i--) {
+            ctx.fillText(LogHistory[i], 2, GAMEINFO.GAME_PIXEL_HEIGHT - (12 * (LogHistory.length - 1 - i)) - 4);
+        }
+    }
+    TextLog.DrawLog = DrawLog;
+})(TextLog || (TextLog = {}));
+
 var Point = (function () {
     function Point(x, y) {
         if (x === void 0) { x = 0; }
@@ -120,6 +140,27 @@ function round(num, places) {
     result = Math.round(result);
     result /= pow10;
     return result;
+}
+if (!Array.prototype.find) {
+    Array.prototype.find = function (predicate) {
+        if (this === null) {
+            throw new TypeError('Array.prototype.find called on null or undefined');
+        }
+        if (typeof predicate !== 'function') {
+            throw new TypeError('predicate must be a function');
+        }
+        var list = Object(this);
+        var length = list.length >>> 0;
+        var thisArg = arguments[1];
+        var value;
+        for (var i = 0; i < length; i++) {
+            value = list[i];
+            if (predicate.call(thisArg, value, i, list)) {
+                return value;
+            }
+        }
+        return undefined;
+    };
 }
 
 var ImageCache;
@@ -277,11 +318,20 @@ var ECS;
             __extends(TorchStr, _super);
             function TorchStr() {
                 _super.call(this, "torch");
-                this.value = 3;
+                this.value = 5;
             }
             return TorchStr;
         }(Component));
         Components.TorchStr = TorchStr;
+        var Alive = (function (_super) {
+            __extends(Alive, _super);
+            function Alive() {
+                _super.call(this, "alive");
+                this.value = true;
+            }
+            return Alive;
+        }(Component));
+        Components.Alive = Alive;
     })(Components = ECS.Components || (ECS.Components = {}));
 })(ECS || (ECS = {}));
 
@@ -363,9 +413,115 @@ var ECS;
             return movementTaken;
         }
         Systems.InputControl = InputControl;
+        function Vision(player, level) {
+            for (var _i = 0, _a = level.visableCells; _i < _a.length; _i++) {
+                var c = _a[_i];
+                level.cells[c.x][c.y].visable = false;
+            }
+            level.visableCells = [];
+            var playerPos = player["pos"].value;
+            var dx, dy;
+            var VisionPts = [];
+            var visableCells = [];
+            var torchStr = player["torch"].value;
+            for (var d = -torchStr; d <= torchStr; d += 1) {
+                VisionPts[VisionPts.length] = new Point(d, -torchStr);
+                VisionPts[VisionPts.length] = new Point(d, torchStr);
+                VisionPts[VisionPts.length] = new Point(-torchStr, d);
+                VisionPts[VisionPts.length] = new Point(torchStr, d);
+            }
+            var steps = 0, incX = 0, incY = 0;
+            var px = round((playerPos.x + 0.5) * GAMEINFO.TILESIZE, 2), py = round((playerPos.y + 0.5) * GAMEINFO.TILESIZE, 2);
+            for (var _b = 0, VisionPts_1 = VisionPts; _b < VisionPts_1.length; _b++) {
+                var pt = VisionPts_1[_b];
+                var vx = px, vy = py;
+                dx = round((pt.x) * GAMEINFO.TILESIZE, 2);
+                dy = round((pt.y) * GAMEINFO.TILESIZE, 2);
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    steps = Math.abs(dx);
+                }
+                else {
+                    steps = Math.abs(dy);
+                }
+                incX = round(dx / steps, 2);
+                incY = round(dy / steps, 2);
+                if (incX < 0 && incY > 0) {
+                    vy -= 1;
+                }
+                else if (incX > 0 && incY < 0) {
+                    vx -= 1;
+                }
+                var tx = 0, ty = 0;
+                for (var v = 0; v < steps; v++) {
+                    vx = round((vx + incX), 2);
+                    vy = round((vy + incY), 2);
+                    tx = Math.floor(vx / GAMEINFO.TILESIZE);
+                    ty = Math.floor(vy / GAMEINFO.TILESIZE);
+                    if (level.cells[tx] && level.cells[tx][ty]) {
+                        if (!level.cells[tx][ty].discovered) {
+                            level.cells[tx][ty].discovered = true;
+                            level.render_m = level.render_mm = true;
+                        }
+                        if (!level.cells[tx][ty].visable) {
+                            level.cells[tx][ty].visable = true;
+                            level.visableCells[level.visableCells.length] = new Point(tx, ty);
+                        }
+                        if (level.cells[tx][ty].tileID === 3 || level.cells[tx][ty].tileID === 4) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        Systems.Vision = Vision;
         function AIControl(e, level, player) {
+            var dx = 0, dy = 0, mx = 0, my = 0;
+            dx = e["pos"].value.x - player["pos"].value.x;
+            dy = e["pos"].value.y - player["pos"].value.y;
+            if (Math.abs(dx) <= 6 && Math.abs(dy) <= 6) {
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    if (e["pos"].value.x < player["pos"].value.x) {
+                        mx = 1;
+                    }
+                    else if (e["pos"].value.x > player["pos"].value.x) {
+                        mx = -1;
+                    }
+                }
+                else {
+                    if (e["pos"].value.y < player["pos"].value.y) {
+                        my = 1;
+                    }
+                    else if (e["pos"].value.y > player["pos"].value.y) {
+                        my = -1;
+                    }
+                }
+            }
+            else {
+                if (randomInt(0, 1) === 0) {
+                    mx = 1;
+                }
+                else {
+                    my = -1;
+                }
+                if (randomInt(0, 1) === 0) {
+                    mx *= -1;
+                    my *= -1;
+                }
+            }
+            if (level.walkable(level.cells[e["pos"].value.x + mx][e["pos"].value.y + my])) {
+                e["pos"].value.x += mx;
+                e["pos"].value.y += my;
+            }
         }
         Systems.AIControl = AIControl;
+        function StubCombat(e, level, player) {
+            if (e["pos"].value.x === player["pos"].value.x
+                && e["pos"].value.y === player["pos"].value.y) {
+                e["alive"].value = false;
+                TextLog.AddLog("Rat got gatted!");
+            }
+        }
+        Systems.StubCombat = StubCombat;
     })(Systems = ECS.Systems || (ECS.Systems = {}));
 })(ECS || (ECS = {}));
 
@@ -402,6 +558,7 @@ var Level = (function () {
         this.camThresh = 12;
         this.timer = 0;
         this.cells = [];
+        this.visableCells = [];
         this._width = width;
         this._height = height;
         this.camera = camera;
@@ -447,6 +604,9 @@ var Level = (function () {
     };
     Level.prototype.partOfRoom = function (cell) {
         return (cell.tileID === 2);
+    };
+    Level.prototype.walkable = function (cell) {
+        return (cell.tileID === 2 || cell.tileID === 3 || cell.tileID === 5 || cell.tileID === 6);
     };
     Level.prototype.floodDiscover = function (x, y) {
         var maxX = this._width - 1;
@@ -578,27 +738,18 @@ var Level = (function () {
         if (this.timer < 75)
             return;
         var step = 1;
-        var player;
-        for (var _i = 0, _a = this.EntityList; _i < _a.length; _i++) {
-            var e = _a[_i];
-            if (e["player"]) {
-                player = e;
-            }
-        }
+        var player = this.EntityList.find(function (e, i, arr) { return (e["player"]); });
         var playerPos = player["pos"].value;
+        var enemies = this.EntityList.filter(function (e, i, arr) { return (e["enemy"] && e["alive"] && e["alive"].value === true); });
         if (ECS.Systems.InputControl(player, this)) {
-            for (var _b = 0, _c = this.EntityList; _b < _c.length; _b++) {
-                var e = _c[_b];
-                if (e["enemy"]) {
-                    ECS.Systems.AIControl(e, this, player);
-                }
+            for (var _i = 0, enemies_1 = enemies; _i < enemies_1.length; _i++) {
+                var e = enemies_1[_i];
+                ECS.Systems.AIControl(e, this, player);
+                ECS.Systems.StubCombat(e, this, player);
             }
+            ECS.Systems.Vision(player, this);
             this.redraw = true;
             this.timer = 0;
-        }
-        if (!this.cells[playerPos.x][playerPos.y].discovered) {
-            this.floodDiscover(playerPos.x, playerPos.y);
-            this.render_m = this.render_mm = true;
         }
     };
     Level.prototype.getTempColor = function (tileID) {
@@ -689,60 +840,15 @@ var Level = (function () {
                 playerPos = player["pos"].value;
             }
         }
-        var VisionPts = [];
-        var visableCells = [];
-        var torchStr = player["torch"].value;
-        for (var d = -torchStr; d <= torchStr; d += 1) {
-            VisionPts[VisionPts.length] = new Point(d, -torchStr);
-            VisionPts[VisionPts.length] = new Point(d, torchStr);
-            VisionPts[VisionPts.length] = new Point(-torchStr, d);
-            VisionPts[VisionPts.length] = new Point(torchStr, d);
-        }
-        var steps = 0, incX = 0, incY = 0;
-        ctx.globalAlpha = 0.1;
-        ctx.fillStyle = "#FFFFFF";
-        var px = round((playerPos.x + 0.5) * GAMEINFO.TILESIZE, 2), py = round((playerPos.y + 0.5) * GAMEINFO.TILESIZE, 2);
-        for (var _b = 0, VisionPts_1 = VisionPts; _b < VisionPts_1.length; _b++) {
-            var pt = VisionPts_1[_b];
-            var vx = px, vy = py;
-            dx = round((pt.x) * GAMEINFO.TILESIZE, 2);
-            dy = round((pt.y) * GAMEINFO.TILESIZE, 2);
-            if (Math.abs(dx) > Math.abs(dy)) {
-                steps = Math.abs(dx);
-            }
-            else {
-                steps = Math.abs(dy);
-            }
-            incX = round(dx / steps, 2);
-            incY = round(dy / steps, 2);
-            if (incX < 0 && incY > 0) {
-                vy -= 1;
-            }
-            else if (incX > 0 && incY < 0) {
-                vx -= 1;
-            }
-            var tx = 0, ty = 0;
-            for (var v = 0; v < steps; v++) {
-                vx = round((vx + incX), 2);
-                vy = round((vy + incY), 2);
-                tx = Math.floor(vx / GAMEINFO.TILESIZE);
-                ty = Math.floor(vy / GAMEINFO.TILESIZE);
-                if (this.cells[tx] && this.cells[tx][ty]) {
-                    if (this.cells[tx][ty].tileID === 3 || this.cells[tx][ty].tileID === 4) {
-                        break;
-                    }
-                    if (!this.cells[tx][ty].visable) {
-                        this.cells[tx][ty].visable = true;
-                        visableCells[visableCells.length] = this.cells[tx][ty];
-                        ctx.fillRect((tx - this.camera.xOffset) * GAMEINFO.TILESIZE, (ty - this.camera.yOffset) * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
-                    }
-                }
-            }
+        ctx.globalAlpha = 0.05;
+        for (var _b = 0, _c = this.visableCells; _b < _c.length; _b++) {
+            var c = _c[_b];
+            ctx.fillRect((c.x - this.camera.xOffset) * GAMEINFO.TILESIZE, (c.y - this.camera.yOffset) * GAMEINFO.TILESIZE, GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
         }
         ctx.globalAlpha = 1.0;
         var index = 0;
-        for (var _c = 0, _d = this.EntityList; _c < _d.length; _c++) {
-            var e = _d[_c];
+        for (var _d = 0, _e = this.EntityList; _d < _e.length; _d++) {
+            var e = _e[_d];
             dx = dy = 0;
             if (e["player"]) {
                 index = 0;
@@ -755,16 +861,12 @@ var Level = (function () {
                 ctx.fillStyle = "#FF0000";
             }
             var t = e.components["pos"].value;
-            if (e["player"] || this.cells[t.x][t.y].visable) {
+            if (e["player"] || (e["enemy"] && e["alive"] && e["alive"].value === true && this.cells[t.x][t.y].visable)) {
                 ctx.drawImage(SpriteSheetCache.spriteSheet("entities").sprites[index], 0, 0, 16, 16, (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE), (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE), 16, 16);
                 ctx.fillRect(t.x + (GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width), t.y, 1, 1);
             }
         }
         ctx.globalAlpha = 1.0;
-        for (var _e = 0, visableCells_1 = visableCells; _e < visableCells_1.length; _e++) {
-            var c = visableCells_1[_e];
-            c.visable = false;
-        }
         this.redraw = true;
     };
     return Level;
@@ -938,6 +1040,25 @@ var Dungeon = (function (_super) {
             }
         }
         this.generate(32);
+        var player = new ECS.Entity();
+        player.addComponent(new ECS.Components.IsPlayer());
+        player.addComponent(new ECS.Components.TilePos());
+        player.addComponent(new ECS.Components.TorchStr());
+        player.addComponent(new ECS.Components.Alive());
+        player["pos"].value.x = this.entrance.x;
+        player["pos"].value.y = this.entrance.y;
+        this.EntityList.push(player);
+        for (var i = 0; i < 20; i++) {
+            var enemy = new ECS.Entity();
+            enemy.addComponent(new ECS.Components.IsEnemy());
+            enemy.addComponent(new ECS.Components.TilePos());
+            enemy.addComponent(new ECS.Components.Alive());
+            do {
+                enemy["pos"].value.x = randomInt(0, 159);
+                enemy["pos"].value.y = randomInt(0, 159);
+            } while (this.cells[enemy["pos"].value.x][enemy["pos"].value.y].tileID !== 2);
+            this.EntityList.push(enemy);
+        }
     }
     Dungeon.prototype.scan = function (room, wall, adjustForDoor) {
         var result = true;
@@ -1099,6 +1220,40 @@ var Dungeon = (function (_super) {
     return Dungeon;
 }(Level));
 
+var World = (function () {
+    function World() {
+        this.levelHistory = [];
+        this.redraw = true;
+        this.levelHistory[length] = this.currentLevel = new Dungeon(160, 160, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
+        var player = this.currentLevel.EntityList.find(function (e, i, arr) { return (e["player"]); });
+        ECS.Systems.Vision(player, this.currentLevel);
+        this.currentLevel.camera.xOffset = this.currentLevel.entrance.x - (this.currentLevel.camera.width / 2);
+        this.currentLevel.camera.yOffset = this.currentLevel.entrance.y - (this.currentLevel.camera.height / 2);
+        this.currentLevel.snapCameraToLevel();
+    }
+    World.prototype.update = function (delta) {
+        this.currentLevel.redraw = this.redraw;
+        this.currentLevel.update(delta);
+        this.redraw = this.currentLevel.redraw;
+    };
+    World.prototype.draw = function (ctx) {
+        if (this.currentLevel.redraw) {
+            ctx.fillStyle = "#ffffff";
+            this.currentLevel.draw(ctx);
+            ctx.fillStyle = "#111111";
+            ctx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, GAMEINFO.GAME_PIXEL_HEIGHT);
+            TextLog.DrawLog(ctx);
+            ctx.fillStyle = "#111111";
+            ctx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
+            ctx.fillStyle = "#ffffff";
+            this.currentLevel.drawMiniMap(ctx);
+            this.currentLevel.drawEntities(ctx);
+            this.currentLevel.redraw = false;
+        }
+    };
+    return World;
+}());
+
 var Game = (function () {
     function Game(screen) {
         this.change = true;
@@ -1127,29 +1282,9 @@ var Game = (function () {
         SpriteSheetCache.spriteSheet("entities").reColourize(1, 150, 150, 150);
         SpriteSheetCache.spriteSheet("tiles").reColourize(4, 75, 75, 75);
         SpriteSheetCache.spriteSheet("tiles").reColourize(3, 140, 100, 60);
-        this.level = new Dungeon(160, 160, new Camera(GAMEINFO.GAMESCREEN_TILE_WIDTH, GAMEINFO.GAMESCREEN_TILE_HEIGHT));
-        this.level.floodDiscover(this.level.entrance.x, this.level.entrance.y);
-        this.level.camera.xOffset = this.level.entrance.x - (this.level.camera.width / 2);
-        this.level.camera.yOffset = this.level.entrance.y - (this.level.camera.height / 2);
-        this.level.snapCameraToLevel();
-        var player = new ECS.Entity();
-        player.addComponent(new ECS.Components.IsPlayer());
-        player.addComponent(new ECS.Components.TilePos());
-        player.addComponent(new ECS.Components.TorchStr());
-        player["pos"].value.x = this.level.entrance.x;
-        player["pos"].value.y = this.level.entrance.y;
-        this.level.EntityList.push(player);
-        for (var i = 0; i < 20; i++) {
-            var enemy = new ECS.Entity();
-            enemy.addComponent(new ECS.Components.IsEnemy());
-            enemy.addComponent(new ECS.Components.TilePos());
-            do {
-                enemy["pos"].value.x = randomInt(0, 159);
-                enemy["pos"].value.y = randomInt(0, 159);
-            } while (this.level.cells[enemy["pos"].value.x][enemy["pos"].value.y].tileID !== 2);
-            this.level.EntityList.push(enemy);
-        }
+        this.world = new World();
         this.state = "MainMenu";
+        TextLog.AddLog("Arrow keys to move.");
     };
     Game.prototype.update = function (delta) {
         switch (this.state) {
@@ -1164,7 +1299,7 @@ var Game = (function () {
                     }
                     this.deltaPaused = 0;
                 }
-                this.level.update(delta);
+                this.world.update(delta);
                 break;
             case "GamePause":
                 break;
@@ -1180,26 +1315,16 @@ var Game = (function () {
             case "MainMenu":
                 break;
             case "Game":
-                if (this.clearScreen || this.level.redraw) {
+                if (this.clearScreen || this.world.redraw) {
                     this.ctx.clearRect(0, 0, this.screen.width, this.screen.height);
                     this.bufferCtx.clearRect(0, 0, this.screen.width, this.screen.height);
                     this.clearScreen = false;
                 }
-                if (this.level.redraw) {
-                    this.bufferCtx.fillStyle = "#ffffff";
-                    this.level.draw(this.bufferCtx);
-                    this.bufferCtx.fillStyle = "#000000";
-                    this.bufferCtx.fillRect(0, GAMEINFO.GAMESCREEN_TILE_HEIGHT * GAMEINFO.TILESIZE, GAMEINFO.TEXTLOG_TILE_WIDTH * GAMEINFO.TILESIZE, this.screen.height);
-                    this.bufferCtx.fillStyle = "#000000";
-                    this.bufferCtx.fillRect(GAMEINFO.GAMESCREEN_TILE_WIDTH * GAMEINFO.TILESIZE, 0, this.screen.height, this.screen.width);
-                    this.bufferCtx.fillStyle = "#ffffff";
-                    this.level.drawMiniMap(this.bufferCtx);
-                    this.level.drawEntities(this.bufferCtx);
-                    this.bufferCtx.fillStyle = "#ffffff";
-                    this.bufferCtx.fillText("Arrow keys to move.", 10, GAMEINFO.GAME_PIXEL_HEIGHT - 12);
+                if (this.world.redraw) {
+                    this.world.draw(this.bufferCtx);
                     this.ctx.fillStyle = "#ffffff";
                     this.ctx.drawImage(this.buffer, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT, 0, 0, GAMEINFO.GAME_PIXEL_WIDTH, GAMEINFO.GAME_PIXEL_HEIGHT);
-                    this.level.redraw = false;
+                    this.world.redraw = false;
                 }
                 break;
             case "GamePause":
@@ -1250,7 +1375,7 @@ var Game = (function () {
             this.change = this.clearScreen = true;
             this.deltaPaused = performance.now() - this.timePaused;
             this.timePaused = 0;
-            this.level.redraw = true;
+            this.world.redraw = true;
         }
     };
     return Game;

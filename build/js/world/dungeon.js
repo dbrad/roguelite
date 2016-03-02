@@ -17,6 +17,25 @@ var Dungeon = (function (_super) {
             }
         }
         this.generate(32);
+        var player = new ECS.Entity();
+        player.addComponent(new ECS.Components.IsPlayer());
+        player.addComponent(new ECS.Components.TilePos());
+        player.addComponent(new ECS.Components.TorchStr());
+        player.addComponent(new ECS.Components.Alive());
+        player["pos"].value.x = this.entrance.x;
+        player["pos"].value.y = this.entrance.y;
+        this.EntityList.push(player);
+        for (var i = 0; i < 20; i++) {
+            var enemy = new ECS.Entity();
+            enemy.addComponent(new ECS.Components.IsEnemy());
+            enemy.addComponent(new ECS.Components.TilePos());
+            enemy.addComponent(new ECS.Components.Alive());
+            do {
+                enemy["pos"].value.x = randomInt(0, 159);
+                enemy["pos"].value.y = randomInt(0, 159);
+            } while (this.cells[enemy["pos"].value.x][enemy["pos"].value.y].tileID !== 2);
+            this.EntityList.push(enemy);
+        }
     }
     Dungeon.prototype.scan = function (room, wall, adjustForDoor) {
         var result = true;

@@ -16,6 +16,7 @@ class Level {
     public render_m: boolean = true;
     public render_mm: boolean = true;
     public cells: Cell[][];
+    public visableCells: Point[];
     protected _width: number;
     protected _height: number;
     protected MiniMap: HTMLCanvasElement;
@@ -31,6 +32,7 @@ class Level {
 
     constructor(width: number, height: number, camera: Camera) {
         this.cells = [];
+        this.visableCells = [];
         this._width = width;
         this._height = height;
         this.camera = camera;
@@ -71,10 +73,12 @@ class Level {
         }
     }
 
-    private partOfRoom(cell: Cell): boolean {
+    public partOfRoom(cell: Cell): boolean {
         return (cell.tileID === 2);
     }
-
+    public walkable(cell: Cell): boolean {
+        return (cell.tileID === 2 || cell.tileID === 3 || cell.tileID === 5 || cell.tileID === 6);
+    }
     public floodDiscover(x: number, y: number) {
         let maxX: number = this._width - 1;
         let maxY: number = this._height - 1;
@@ -233,28 +237,23 @@ class Level {
             return;
 
         let step: number = 1;
-        let player: ECS.Entity;
-        for (let e of this.EntityList) {
-            if (e["player"]) {
-                player = e;
-            }
-        }
+        let player: ECS.Entity = this.EntityList.find(function(e: ECS.Entity, i: number, arr: ECS.Entity[]) { return (e["player"]); });
+
         let playerPos: Point = player["pos"].value
 
+        let enemies: ECS.Entity[] = this.EntityList.filter(function(e, i, arr) { return (e["enemy"] && e["alive"] && e["alive"].value === true) });
+
         if (ECS.Systems.InputControl(player, this)) {
-            for (let e of this.EntityList) {
-                if (e["enemy"]) {
-                    ECS.Systems.AIControl(e, this, player);
-                }
+            for (let e of enemies) {
+                ECS.Systems.AIControl(e, this, player);
+                ECS.Systems.StubCombat(e, this, player);
             }
+            ECS.Systems.Vision(player, this);
+
             this.redraw = true;
             this.timer = 0;
         }
 
-        if (!this.cells[playerPos.x][playerPos.y].discovered) {
-            this.floodDiscover(playerPos.x, playerPos.y);
-            this.render_m = this.render_mm = true;
-        }
     }
     getTempColor(tileID: number): string {
         let result: string = "ff00ff";
@@ -359,70 +358,12 @@ class Level {
             }
         }
 
-        let VisionPts: Point[] = [];
-        let visableCells: Cell[] = [];
-        let torchStr = player["torch"].value; //3.0;
-        for (let d = -torchStr; d <= torchStr; d += 1) {
-            VisionPts[VisionPts.length] = new Point(d, -torchStr);
-            VisionPts[VisionPts.length] = new Point(d, torchStr);
-            VisionPts[VisionPts.length] = new Point(-torchStr, d);
-            VisionPts[VisionPts.length] = new Point(torchStr, d);
-        }
-        let steps: number = 0, incX: number = 0, incY: number = 0;
-        ctx.globalAlpha = 0.1;
-        ctx.fillStyle = "#FFFFFF";
-        let px: number = round((playerPos.x + 0.5) * GAMEINFO.TILESIZE, 2),
-            py: number = round((playerPos.y + 0.5) * GAMEINFO.TILESIZE, 2);
-        for (let pt of VisionPts) {
-            let vx: number = px, vy: number = py;
-
-            dx = round((pt.x) * GAMEINFO.TILESIZE, 2);
-            dy = round((pt.y) * GAMEINFO.TILESIZE, 2);
-
-            if (Math.abs(dx) > Math.abs(dy)) {
-                steps = Math.abs(dx);
-            } else {
-                steps = Math.abs(dy);
-            }
-
-            incX = round(dx / steps, 2);
-            incY = round(dy / steps, 2);
-
-            if (incX < 0 && incY > 0) {
-                vy -= 1;
-            } else if (incX > 0 && incY < 0) {
-                vx -= 1;
-            }
-            let tx: number = 0, ty: number = 0;
-            for (let v = 0; v < steps; v++) {
-                vx = round((vx + incX), 2);
-                vy = round((vy + incY), 2);
-
-                tx = Math.floor(vx / GAMEINFO.TILESIZE);
-                ty = Math.floor(vy / GAMEINFO.TILESIZE);
-
-                if (this.cells[tx] && this.cells[tx][ty]) {
-                    if (this.cells[tx][ty].tileID === 3 || this.cells[tx][ty].tileID === 4) {
-                        break;
-                    }
-                    if (!this.cells[tx][ty].visable) {
-                        this.cells[tx][ty].visable = true;
-                        visableCells[visableCells.length] = this.cells[tx][ty];
-                        ctx.fillRect(
-                            (tx - this.camera.xOffset) * GAMEINFO.TILESIZE,
-                            (ty - this.camera.yOffset) * GAMEINFO.TILESIZE,
-                            GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
-                    }
-                }
-            }
-            // ctx.globalAlpha = 1.0;
-            // ctx.strokeStyle = "#FFF";
-            // ctx.lineWidth = 1;
-            // ctx.beginPath();
-            // ctx.moveTo(Math.round(px - (this.camera.xOffset * GAMEINFO.TILESIZE)), Math.round(py - (this.camera.yOffset * GAMEINFO.TILESIZE)));
-            // ctx.lineTo(Math.round(vx - (this.camera.xOffset * GAMEINFO.TILESIZE)), Math.round(vy - (this.camera.yOffset * GAMEINFO.TILESIZE)));
-            // ctx.stroke();
-            // ctx.globalAlpha = 0.1;
+        ctx.globalAlpha = 0.05;
+        for (let c of this.visableCells) {
+            ctx.fillRect(
+                (c.x - this.camera.xOffset) * GAMEINFO.TILESIZE,
+                (c.y - this.camera.yOffset) * GAMEINFO.TILESIZE,
+                GAMEINFO.TILESIZE, GAMEINFO.TILESIZE);
         }
         ctx.globalAlpha = 1.0;
 
@@ -440,7 +381,7 @@ class Level {
                 ctx.fillStyle = "#FF0000";
             }
             let t: Point = e.components["pos"].value;
-            if (e["player"] || this.cells[t.x][t.y].visable) {
+            if (e["player"] || (e["enemy"] && e["alive"] && e["alive"].value === true && this.cells[t.x][t.y].visable)) {
                 ctx.drawImage(SpriteSheetCache.spriteSheet("entities").sprites[index],
                     0, 0,
                     16, 16,
@@ -454,9 +395,6 @@ class Level {
             }
         }
         ctx.globalAlpha = 1.0;
-        for (let c of visableCells) {
-            c.visable = false;
-        }
         this.redraw = true;
     }
 }

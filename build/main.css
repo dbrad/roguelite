@@ -21,4 +21,5 @@ canvas, img {
   image-rendering: crisp-edges;
   image-rendering: pixelated;                 /* Awesome future-browsers       */
   -ms-interpolation-mode: nearest-neighbor;   /* IE                            */
+  border: 1px white solid;
 }

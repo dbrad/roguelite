@@ -45,10 +45,19 @@ var ECS;
             __extends(TorchStr, _super);
             function TorchStr() {
                 _super.call(this, "torch");
-                this.value = 3;
+                this.value = 5;
             }
             return TorchStr;
         }(Component));
         Components.TorchStr = TorchStr;
+        var Alive = (function (_super) {
+            __extends(Alive, _super);
+            function Alive() {
+                _super.call(this, "alive");
+                this.value = true;
+            }
+            return Alive;
+        }(Component));
+        Components.Alive = Alive;
     })(Components = ECS.Components || (ECS.Components = {}));
 })(ECS || (ECS = {}));

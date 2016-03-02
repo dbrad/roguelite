@@ -10,6 +10,7 @@ gulp.task('concat', function() {
 		"build/js/system/game_config.js",
 		"build/js/system/input.js",
 		"build/js/system/camera.js",
+		"build/js/system/textlog.js",
 
 		"build/js/types/types.js",
 
@@ -30,6 +31,7 @@ gulp.task('concat', function() {
 		"build/js/world/cave.js",
 		"build/js/world/room.js",
 		"build/js/world/dungeon.js",
+		"build/js/world/world.js",
 
 		"build/js/system/game.js"
 	];
