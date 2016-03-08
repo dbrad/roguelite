@@ -27,7 +27,7 @@ class Level {
     public camera: Camera;
 
     protected tileSet: TileSet;
-    protected ItemList: Item[];
+    protected ItemList: Items.Item[];
     public EntityList: ECS.Entity[];
 
     constructor(width: number, height: number, camera: Camera) {
