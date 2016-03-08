@@ -195,7 +195,7 @@ function onResize() {
     stage.style.webkitTransform = rule;
 }
 
-window.onload = () => {
+window.onload = function() {
     onResize();
     window.addEventListener("resize", onResize, false);
     window.onkeydown = Input.KB.keyDown;
@@ -208,5 +208,5 @@ window.onload = () => {
         window.onblur = game.pause.bind(game);
         window.onfocus = game.unpause.bind(game);
         game.run();
-    })
+    });
 };

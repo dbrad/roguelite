@@ -65,7 +65,7 @@ namespace ECS {
 
             let VisionPts: Point[] = [];
             let visableCells: Cell[] = [];
-            let torchStr = player["torch"].value; //3.0;
+            let torchStr = player["torch"].value;
             for (let d = -torchStr; d <= torchStr; d += 1) {
                 VisionPts[VisionPts.length] = new Point(d, -torchStr);
                 VisionPts[VisionPts.length] = new Point(d, torchStr);

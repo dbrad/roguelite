@@ -530,10 +530,25 @@ var TileSet = (function () {
     }
     return TileSet;
 }());
+var Stat = (function () {
+    function Stat() {
+    }
+    return Stat;
+}());
 var Item = (function () {
-    function Item() {
+    function Item(name, value, stats) {
+        if (stats === void 0) { stats = []; }
+        this.name = name;
+        this.value = value;
+        this.stats = stats;
     }
     return Item;
+}());
+
+var Player = (function () {
+    function Player() {
+    }
+    return Player;
 }());
 
 var Cell = (function () {

@@ -38,6 +38,7 @@
         "src/world/dungeon.ts",
         "src/world/game_objs.ts",
         "src/world/level.ts",
+        "src/world/player.ts",
         "src/world/room.ts",
         "src/world/world.ts"
     ],
