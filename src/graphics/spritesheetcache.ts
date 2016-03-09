@@ -3,7 +3,7 @@ interface SpriteSheetArray {
     [index: string]: SpriteSheet;
 }
 namespace SpriteSheetCache {
-    var sheets: SpriteSheetArray = {};
+    let sheets: SpriteSheetArray = {};
 
     export function storeSheet(sheet: SpriteSheet): void {
         sheets[sheet.name] = sheet;

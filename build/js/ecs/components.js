@@ -32,6 +32,24 @@ var ECS;
             return IsEnemy;
         }(Component));
         Components.IsEnemy = IsEnemy;
+        var Name = (function (_super) {
+            __extends(Name, _super);
+            function Name(name) {
+                _super.call(this, "name");
+                this.value = name;
+            }
+            return Name;
+        }(Component));
+        Components.Name = Name;
+        var Sprite = (function (_super) {
+            __extends(Sprite, _super);
+            function Sprite(image) {
+                _super.call(this, "sprite");
+                this.value = image;
+            }
+            return Sprite;
+        }(Component));
+        Components.Sprite = Sprite;
         var TilePos = (function (_super) {
             __extends(TilePos, _super);
             function TilePos() {
@@ -59,5 +77,14 @@ var ECS;
             return Alive;
         }(Component));
         Components.Alive = Alive;
+        var Audio = (function (_super) {
+            __extends(Audio, _super);
+            function Audio(soundName, sound) {
+                _super.call(this, "audio-" + soundName);
+                this.value = new AudioPool(sound, 3);
+            }
+            return Audio;
+        }(Component));
+        Components.Audio = Audio;
     })(Components = ECS.Components || (ECS.Components = {}));
 })(ECS || (ECS = {}));

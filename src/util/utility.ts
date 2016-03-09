@@ -20,8 +20,8 @@ function shuffle(array: any[]): any[] {
     return array;
 }
 function round(num: number, places: number): number {
-    var pow10 = Math.pow(10, places);
-    var result = num * pow10;
+    let pow10 = Math.pow(10, places);
+    let result = num * pow10;
     result = Math.round(result);
     result /= pow10;
     return result;
@@ -38,12 +38,12 @@ if (!Array.prototype.find) {
         if (typeof predicate !== 'function') {
             throw new TypeError('predicate must be a function');
         }
-        var list = Object(this);
-        var length = list.length >>> 0;
-        var thisArg = arguments[1];
-        var value: any;
+        let list = Object(this);
+        let length = list.length >>> 0;
+        let thisArg = arguments[1];
+        let value: any;
 
-        for (var i = 0; i < length; i++) {
+        for (let i = 0; i < length; i++) {
             value = list[i];
             if (predicate.call(thisArg, value, i, list)) {
                 return value;

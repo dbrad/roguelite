@@ -19,6 +19,18 @@ namespace ECS {
                 this.value = true;
             }
         }
+        export class Name extends Component<string> {
+            constructor(name: string) {
+                super("name");
+                this.value = name;
+            }
+        }
+        export class Sprite extends Component<HTMLCanvasElement> {
+            constructor(image: HTMLCanvasElement) {
+                super("sprite");
+                this.value = image;
+            }
+        }
         export class TilePos extends Component<Point> {
             constructor() {
                 super("pos");
@@ -35,6 +47,12 @@ namespace ECS {
             constructor() {
                 super("alive");
                 this.value = true;
+            }
+        }
+        export class Audio extends Component<AudioPool> {
+            constructor(soundName: string, sound: string) {
+                super("audio-" + soundName);
+                this.value = new AudioPool(sound, 3);
             }
         }
     }

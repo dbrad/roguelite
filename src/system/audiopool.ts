@@ -5,7 +5,7 @@ class AudioPool {
 
     constructor(sound: string, maxSize: number = 1) {
         this.maxSize = maxSize
-        for (var i: number = 0; i < this.maxSize; i++) {
+        for (let i: number = 0; i < this.maxSize; i++) {
             this.pool[i] = new Audio(sound);
             this.pool[i].load();
         }

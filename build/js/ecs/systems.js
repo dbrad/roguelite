@@ -54,6 +54,9 @@ var ECS;
                 }
                 movementTaken = true;
             }
+            if (movementTaken && e["audio-move"]) {
+                e["audio-move"].value.play();
+            }
             return movementTaken;
         }
         Systems.InputControl = InputControl;
@@ -162,7 +165,10 @@ var ECS;
             if (e["pos"].value.x === player["pos"].value.x
                 && e["pos"].value.y === player["pos"].value.y) {
                 e["alive"].value = false;
-                TextLog.AddLog("Rat got gatted!");
+                if (e["audio-death"]) {
+                    e["audio-death"].value.play();
+                }
+                TextLog.AddLog(e["name"].value + " got gatted!");
             }
         }
         Systems.StubCombat = StubCombat;

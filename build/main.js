@@ -305,6 +305,24 @@ var ECS;
             return IsEnemy;
         }(Component));
         Components.IsEnemy = IsEnemy;
+        var Name = (function (_super) {
+            __extends(Name, _super);
+            function Name(name) {
+                _super.call(this, "name");
+                this.value = name;
+            }
+            return Name;
+        }(Component));
+        Components.Name = Name;
+        var Sprite = (function (_super) {
+            __extends(Sprite, _super);
+            function Sprite(image) {
+                _super.call(this, "sprite");
+                this.value = image;
+            }
+            return Sprite;
+        }(Component));
+        Components.Sprite = Sprite;
         var TilePos = (function (_super) {
             __extends(TilePos, _super);
             function TilePos() {
@@ -332,6 +350,15 @@ var ECS;
             return Alive;
         }(Component));
         Components.Alive = Alive;
+        var Audio = (function (_super) {
+            __extends(Audio, _super);
+            function Audio(soundName, sound) {
+                _super.call(this, "audio-" + soundName);
+                this.value = new AudioPool(sound, 3);
+            }
+            return Audio;
+        }(Component));
+        Components.Audio = Audio;
     })(Components = ECS.Components || (ECS.Components = {}));
 })(ECS || (ECS = {}));
 
@@ -409,6 +436,9 @@ var ECS;
                     }
                 }
                 movementTaken = true;
+            }
+            if (movementTaken && e["audio-move"]) {
+                e["audio-move"].value.play();
             }
             return movementTaken;
         }
@@ -518,7 +548,10 @@ var ECS;
             if (e["pos"].value.x === player["pos"].value.x
                 && e["pos"].value.y === player["pos"].value.y) {
                 e["alive"].value = false;
-                TextLog.AddLog("Rat got gatted!");
+                if (e["audio-death"]) {
+                    e["audio-death"].value.play();
+                }
+                TextLog.AddLog(e["name"].value + " got gatted!");
             }
         }
         Systems.StubCombat = StubCombat;
@@ -932,7 +965,7 @@ var Level = (function () {
             }
             var t = e.components["pos"].value;
             if (e["player"] || (e["enemy"] && e["alive"] && e["alive"].value === true && this.cells[t.x][t.y].visable)) {
-                ctx.drawImage(SpriteSheetCache.spriteSheet("entities").sprites[index], 0, 0, 16, 16, (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE), (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE), 16, 16);
+                ctx.drawImage(e["sprite"].value, 0, 0, 16, 16, (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE), (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE), 16, 16);
                 ctx.fillRect(t.x + (GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width), t.y, 1, 1);
             }
         }
@@ -1112,17 +1145,29 @@ var Dungeon = (function (_super) {
         this.generate(32);
         var player = new ECS.Entity();
         player.addComponent(new ECS.Components.IsPlayer());
+        player.addComponent(new ECS.Components.Name("Player"));
+        player.addComponent(new ECS.Components.Sprite(SpriteSheetCache.spriteSheet("entities").sprites[0]));
         player.addComponent(new ECS.Components.TilePos());
         player.addComponent(new ECS.Components.TorchStr());
         player.addComponent(new ECS.Components.Alive());
+        player.addComponent(new ECS.Components.Audio("move", "player_move.wav"));
         player["pos"].value.x = this.entrance.x;
         player["pos"].value.y = this.entrance.y;
         this.EntityList.push(player);
         for (var i = 0; i < 20; i++) {
             var enemy = new ECS.Entity();
             enemy.addComponent(new ECS.Components.IsEnemy());
+            if (i % 2 === 0) {
+                enemy.addComponent(new ECS.Components.Name("Rat"));
+                enemy.addComponent(new ECS.Components.Sprite(SpriteSheetCache.spriteSheet("entities").sprites[1]));
+            }
+            else {
+                enemy.addComponent(new ECS.Components.Name("Bat"));
+                enemy.addComponent(new ECS.Components.Sprite(SpriteSheetCache.spriteSheet("entities").sprites[2]));
+            }
             enemy.addComponent(new ECS.Components.TilePos());
             enemy.addComponent(new ECS.Components.Alive());
+            enemy.addComponent(new ECS.Components.Audio("death", "rat.wav"));
             do {
                 enemy["pos"].value.x = randomInt(0, 159);
                 enemy["pos"].value.y = randomInt(0, 159);
@@ -1347,11 +1392,13 @@ var Game = (function () {
     Game.prototype.init = function () {
         console.log("Initializing...");
         SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "tiles", 16, 0, new Dimension(7, 1)));
-        SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "entities", 16, 0, new Dimension(2, 1), new Point(0, 16)));
+        SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "entities", 16, 0, new Dimension(3, 1), new Point(0, 16)));
         SpriteSheetCache.spriteSheet("entities").reColourize(0, 245, 200, 25);
         SpriteSheetCache.spriteSheet("entities").reColourize(1, 150, 150, 150);
-        SpriteSheetCache.spriteSheet("tiles").reColourize(4, 75, 75, 75);
+        SpriteSheetCache.spriteSheet("entities").reColourize(2, 200, 1, 1);
+        SpriteSheetCache.spriteSheet("tiles").reColourize(4, 50, 50, 50);
         SpriteSheetCache.spriteSheet("tiles").reColourize(3, 140, 100, 60);
+        SpriteSheetCache.spriteSheet("tiles").reColourize(2, 25, 25, 25);
         this.world = new World();
         this.state = "MainMenu";
         TextLog.AddLog("Arrow keys to move.");

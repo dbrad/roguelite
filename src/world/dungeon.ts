@@ -25,12 +25,15 @@ class Dungeon extends Level {
             }
         }
         this.generate(32);
-
+        // SpriteSheetCache.spriteSheet("entities").sprites[index]
         let player = new ECS.Entity();
         player.addComponent(new ECS.Components.IsPlayer());
+        player.addComponent(new ECS.Components.Name("Player"));
+        player.addComponent(new ECS.Components.Sprite(SpriteSheetCache.spriteSheet("entities").sprites[0]));
         player.addComponent(new ECS.Components.TilePos());
         player.addComponent(new ECS.Components.TorchStr());
         player.addComponent(new ECS.Components.Alive());
+        player.addComponent(new ECS.Components.Audio("move", "player_move.wav"));
 
         player["pos"].value.x = this.entrance.x;
         player["pos"].value.y = this.entrance.y;
@@ -39,8 +42,16 @@ class Dungeon extends Level {
         for (let i = 0; i < 20; i++) {
             let enemy = new ECS.Entity();
             enemy.addComponent(new ECS.Components.IsEnemy());
+            if (i % 2 === 0) {
+                enemy.addComponent(new ECS.Components.Name("Rat"));
+                enemy.addComponent(new ECS.Components.Sprite(SpriteSheetCache.spriteSheet("entities").sprites[1]));
+            } else {
+                enemy.addComponent(new ECS.Components.Name("Bat"));
+                enemy.addComponent(new ECS.Components.Sprite(SpriteSheetCache.spriteSheet("entities").sprites[2]));
+            }
             enemy.addComponent(new ECS.Components.TilePos());
             enemy.addComponent(new ECS.Components.Alive());
+            enemy.addComponent(new ECS.Components.Audio("death", "rat.wav"));
             do {
                 enemy["pos"].value.x = randomInt(0, 159);
                 enemy["pos"].value.y = randomInt(0, 159);

@@ -53,6 +53,9 @@ namespace ECS {
                 }
                 movementTaken = true;
             }
+            if (movementTaken && e["audio-move"]) {
+                (<AudioPool>e["audio-move"].value).play();
+            }
             return movementTaken;
         }
         export function Vision(player: Entity, level: Level) {
@@ -121,6 +124,7 @@ namespace ECS {
                 }
             }
         }
+
         export function AIControl(e: Entity, level: Level, player: Entity) {
             let dx: number = 0, dy: number = 0, mx: number = 0, my: number = 0;
             dx = e["pos"].value.x - player["pos"].value.x;
@@ -161,7 +165,10 @@ namespace ECS {
             if (e["pos"].value.x === player["pos"].value.x
                 && e["pos"].value.y === player["pos"].value.y) {
                 e["alive"].value = false;
-                TextLog.AddLog("Rat got gatted!");
+                if (e["audio-death"]) {
+                    e["audio-death"].value.play();
+                }
+                TextLog.AddLog(e["name"].value + " got gatted!");
             }
         }
     }

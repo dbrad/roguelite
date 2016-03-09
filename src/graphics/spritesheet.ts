@@ -29,7 +29,7 @@ class SpriteSheet {
     public reColourize(index: number, r?: number, g?: number, b?: number, a?: number): void {
         let spriteCtx = this.sprites[index].getContext("2d");
         let colourData: ImageData = spriteCtx.getImageData(0, 0, this.tileSize, this.tileSize);
-        for (var i = 0; i < (this.tileSize * this.tileSize) * 4; i += 4) {
+        for (let i = 0; i < (this.tileSize * this.tileSize) * 4; i += 4) {
             colourData.data[i] = r || colourData.data[i];
             colourData.data[i + 1] = g || colourData.data[i + 1];
             colourData.data[i + 2] = b || colourData.data[i + 2];
@@ -42,9 +42,9 @@ class SpriteSheet {
         this.spritesPerRow = ((this.subsheet.w === 0 || this.subsheet.h === 0) ? (this.image.width / this.tileSize) : this.subsheet.w);
         this.spritesPerCol = ((this.subsheet.w === 0 || this.subsheet.h === 0) ? (this.image.height / this.tileSize) : this.subsheet.h);
 
-        var sprite: HTMLCanvasElement;
-        for (var y = 0; y < this.spritesPerCol; y++) {
-            for (var x = 0; x < this.spritesPerRow; x++) {
+        let sprite: HTMLCanvasElement;
+        for (let y = 0; y < this.spritesPerCol; y++) {
+            for (let x = 0; x < this.spritesPerRow; x++) {
                 sprite = this.sprites[x + (y * this.spritesPerRow)] = document.createElement('canvas');
                 sprite.width = this.tileSize;
                 sprite.height = this.tileSize;

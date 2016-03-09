@@ -43,13 +43,15 @@ class Game {
         console.log("Initializing...");
 
         SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "tiles", 16, 0, new Dimension(7, 1)));
-        SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "entities", 16, 0, new Dimension(2, 1), new Point(0, 16)));
+        SpriteSheetCache.storeSheet(new SpriteSheet("sheet", "entities", 16, 0, new Dimension(3, 1), new Point(0, 16)));
 
         SpriteSheetCache.spriteSheet("entities").reColourize(0, 245, 200, 25);
         SpriteSheetCache.spriteSheet("entities").reColourize(1, 150, 150, 150);
+        SpriteSheetCache.spriteSheet("entities").reColourize(2, 200, 1, 1);
 
-        SpriteSheetCache.spriteSheet("tiles").reColourize(4, 75, 75, 75);
+        SpriteSheetCache.spriteSheet("tiles").reColourize(4, 50, 50, 50);
         SpriteSheetCache.spriteSheet("tiles").reColourize(3, 140, 100, 60);
+        SpriteSheetCache.spriteSheet("tiles").reColourize(2, 25, 25, 25);
         // most of this will move to the world class
         // will load a saved world or make a new world from main menu
         this.world = new World();

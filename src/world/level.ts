@@ -241,9 +241,10 @@ class Level {
 
         let playerPos: Point = player["pos"].value
 
-        let enemies: ECS.Entity[] = this.EntityList.filter(function(e, i, arr) { return (e["enemy"] && e["alive"] && e["alive"].value === true) });
+        let enemies: ECS.Entity[] = this.EntityList.filter(function(e: ECS.Entity, i: number, arr: ECS.Entity[]) { return (e["enemy"] && e["alive"] && e["alive"].value === true) });
 
         if (ECS.Systems.InputControl(player, this)) {
+
             for (let e of enemies) {
                 ECS.Systems.AIControl(e, this, player);
                 ECS.Systems.StubCombat(e, this, player);
@@ -382,7 +383,7 @@ class Level {
             }
             let t: Point = e.components["pos"].value;
             if (e["player"] || (e["enemy"] && e["alive"] && e["alive"].value === true && this.cells[t.x][t.y].visable)) {
-                ctx.drawImage(SpriteSheetCache.spriteSheet("entities").sprites[index],
+                ctx.drawImage(e["sprite"].value,
                     0, 0,
                     16, 16,
                     (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE),
