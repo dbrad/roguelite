@@ -25,6 +25,12 @@ namespace ECS {
                 this.value = name;
             }
         }
+        export class TurnTimer extends Component<number> {
+            constructor() {
+                super("timer");
+                this.value = 0;
+            }
+        }
         export class Sprite extends Component<HTMLCanvasElement> {
             constructor(image: HTMLCanvasElement) {
                 super("sprite");
@@ -34,6 +40,12 @@ namespace ECS {
         export class TilePos extends Component<Point> {
             constructor() {
                 super("pos");
+                this.value = new Point(0, 0);
+            }
+        }
+        export class Movement extends Component<Point> {
+            constructor() {
+                super("movement");
                 this.value = new Point(0, 0);
             }
         }

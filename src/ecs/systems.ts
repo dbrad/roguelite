@@ -1,6 +1,3 @@
-/// <reference path="../system/input.ts"/>
-/// <reference path="../world/level.ts"/>
-
 namespace ECS {
     let camThresh: number = 12;
     export namespace Systems {
@@ -9,54 +6,37 @@ namespace ECS {
             let movementTaken = false;
 
             if (Input.KB.wasDown(Input.KB.KEY.LEFT)) {
-                if (level.cells[entityPosition.x - 1][entityPosition.y].tileID !== 4) {
-                    entityPosition.x--;
-                    if (entityPosition.x < level.camera.xOffset + camThresh) {
-                        level.camera.xOffset--;
-                        if (level.camera.xOffset <= 0) {
-                            level.camera.xOffset = 0;
-                        }
-                    }
-                }
+                e["movement"].value.x = -1;
+
                 movementTaken = true;
             } else if (Input.KB.wasDown(Input.KB.KEY.RIGHT)) {
-                if (level.cells[entityPosition.x + 1][entityPosition.y].tileID !== 4) {
-                    entityPosition.x++;
-                    if (entityPosition.x >= level.camera.xOffset + level.camera.width - camThresh) {
-                        level.camera.xOffset++;
-                        if (level.camera.xOffset + level.camera.width >= level.width) {
-                            level.camera.xOffset = (level.width - level.camera.width);
-                        }
-                    }
-                }
+                e["movement"].value.x = 1;
+
                 movementTaken = true;
             } else if (Input.KB.wasDown(Input.KB.KEY.UP)) {
-                if (level.cells[entityPosition.x][entityPosition.y - 1].tileID !== 4) {
-                    entityPosition.y--;
-                    if (entityPosition.y < level.camera.yOffset + (camThresh - 3)) {
-                        level.camera.yOffset--;
-                        if (level.camera.yOffset <= 0) {
-                            level.camera.yOffset = 0;
-                        }
-                    }
-                }
+                e["movement"].value.y = -1;
+
                 movementTaken = true;
             } else if (Input.KB.wasDown(Input.KB.KEY.DOWN)) {
-                if (level.cells[entityPosition.x][entityPosition.y + 1].tileID !== 4) {
-                    entityPosition.y++;
-                    if (entityPosition.y >= level.camera.yOffset + level.camera.height - (camThresh - 3)) {
-                        level.camera.yOffset++;
-                        if (level.camera.yOffset + level.camera.height >= level.height) {
-                            level.camera.yOffset = (level.height - level.camera.height);
-                        }
-                    }
-                }
+                e["movement"].value.y = 1;
                 movementTaken = true;
             }
             if (movementTaken && e["audio-move"]) {
+                Input.KB.clearInputQueue();
                 (<AudioPool>e["audio-move"].value).play();
             }
             return movementTaken;
+        }
+        export function Collision(e: Entity, level: Level) {
+            if (level.cells[e["pos"].value.x + e["movement"].value.x][e["pos"].value.y + e["movement"].value.y].tileID === 4) {
+                e["movement"].value.y = e["movement"].value.x = 0;
+            }
+        }
+        export function Movement(e: Entity, level: Level) {
+            e["pos"].value.y += e["movement"].value.y;
+            e["pos"].value.x += e["movement"].value.x;
+            e["movement"].value.y = e["movement"].value.x = 0;
+            e["timer"].value = 0;
         }
         export function Vision(player: Entity, level: Level) {
             for (let c of level.visableCells) {
@@ -124,7 +104,30 @@ namespace ECS {
                 }
             }
         }
+        export function LockedCameraControl(camera: Camera, e: Entity) {
+            let ex: number = e["pos"].value.x + e["movement"].value.x;
+            let ey: number = e["pos"].value.y + e["movement"].value.y;
+            if (ex < camera.xOffset + camThresh
+                || ex >= camera.xOffset + camera.width - camThresh) {
+                camera.xOffset += e["movement"].value.x;
+            }
+            if (ey < camera.yOffset + (camThresh / 2)
+                || ey >= camera.yOffset + camera.height - (camThresh / 2)) {
+                camera.yOffset += e["movement"].value.y;
+            }
 
+        }
+        export function FreeCameraControl(camera: Camera) {
+            if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
+                camera.xOffset += -1;
+            } else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
+                camera.xOffset += 1;
+            } else if (Input.KB.isDown(Input.KB.KEY.UP)) {
+                camera.yOffset += -1;
+            } else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
+                camera.yOffset += 1;
+            }
+        }
         export function AIControl(e: Entity, level: Level, player: Entity) {
             let dx: number = 0, dy: number = 0, mx: number = 0, my: number = 0;
             dx = e["pos"].value.x - player["pos"].value.x;
@@ -157,13 +160,15 @@ namespace ECS {
                 }
             }
             if (level.walkable(level.cells[e["pos"].value.x + mx][e["pos"].value.y + my])) {
-                e["pos"].value.x += mx;
-                e["pos"].value.y += my;
+                e["movement"].value.x += mx;
+                e["movement"].value.y += my;
             }
         }
         export function StubCombat(e: Entity, level: Level, player: Entity) {
             if (e["pos"].value.x === player["pos"].value.x
-                && e["pos"].value.y === player["pos"].value.y) {
+                && e["pos"].value.y === player["pos"].value.y
+                && !e["player"]
+                && e["alive"].value === true) {
                 e["alive"].value = false;
                 if (e["audio-death"]) {
                     e["audio-death"].value.play();

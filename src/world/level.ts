@@ -1,16 +1,3 @@
-/// <reference path="../system/input.ts"/>
-/// <reference path="../system/camera.ts"/>
-/// <reference path="../system/game_config.ts"/>
-
-/// <reference path="../ecs/entity.ts"/>
-/// <reference path="../ecs/components.ts"/>
-
-/// <reference path="../util/utility.ts"/>
-/// <reference path="../types/types.ts"/>
-
-/// <reference path="./game_objs.ts"/>
-/// <reference path="./cell.ts"/>
-
 class Level {
     public redraw: boolean = true;
     public render_m: boolean = true;
@@ -229,32 +216,55 @@ class Level {
         }
     }
 
-    private camThresh: number = 12;
-    private timer: number = 0;
+
+    //private camThresh: number = 12;
+    private cameraMode: boolean = false;
     update(delta: number): void {
-        this.timer += delta
-        if (this.timer < 75)
-            return;
-
-        let step: number = 1;
         let player: ECS.Entity = this.EntityList.find(function(e: ECS.Entity, i: number, arr: ECS.Entity[]) { return (e["player"]); });
+        if (Input.KB.wasDown(Input.KB.KEY.C)) {
+            this.cameraMode = !this.cameraMode;
+            this.camera.xOffset = player["pos"].value.x - (this.camera.width / 2);
+            this.camera.yOffset = player["pos"].value.y - (this.camera.height / 2);
+            this.snapCameraToLevel();
+            Input.KB.clearInputQueue();
+            if (this.cameraMode) {
+                TextLog.AddLog("Free Camera Mode (Gameplay Paused)");
+            } else {
+                TextLog.AddLog("Locked Camera Mode (Gameplay Resumed)");
+            }
+        }
+        if (this.cameraMode) {
+            ECS.Systems.FreeCameraControl(this.camera);
+            this.snapCameraToLevel();
+            this.redraw = true;
+        } else {
+            for (let e of this.EntityList) {
+                if (e["timer"]
+                    && (ECS.isAliveEnemy(e) && e["timer"].value < 1000)
+                    || ((e["player"] && e["timer"].value < 500))) {
+                    e["timer"].value += delta;
+                    continue;
+                }
+                if (e["player"]) {
+                    ECS.Systems.InputControl(e, this);
+                } else if (ECS.isAliveEnemy(e)) {
+                    ECS.Systems.AIControl(e, this, player);
+                }
 
-        let playerPos: Point = player["pos"].value
-
-        let enemies: ECS.Entity[] = this.EntityList.filter(function(e: ECS.Entity, i: number, arr: ECS.Entity[]) { return (e["enemy"] && e["alive"] && e["alive"].value === true) });
-
-        if (ECS.Systems.InputControl(player, this)) {
-
-            for (let e of enemies) {
-                ECS.Systems.AIControl(e, this, player);
+                if (e["movement"].value.x !== 0 || e["movement"].value.y !== 0) {
+                    ECS.Systems.Collision(e, this);
+                    if (e["player"]) {
+                        ECS.Systems.LockedCameraControl(this.camera, e);
+                        this.snapCameraToLevel();
+                    }
+                    ECS.Systems.Movement(e, this);
+                    this.redraw = true;
+                }
                 ECS.Systems.StubCombat(e, this, player);
             }
-            ECS.Systems.Vision(player, this);
-
-            this.redraw = true;
-            this.timer = 0;
+            if (this.redraw)
+                ECS.Systems.Vision(player, this);
         }
-
     }
     getTempColor(tileID: number): string {
         let result: string = "ff00ff";
@@ -382,7 +392,7 @@ class Level {
                 ctx.fillStyle = "#FF0000";
             }
             let t: Point = e.components["pos"].value;
-            if (e["player"] || (e["enemy"] && e["alive"] && e["alive"].value === true && this.cells[t.x][t.y].visable)) {
+            if (e["player"] || (ECS.isAliveEnemy(e) && this.cells[t.x][t.y].visable)) {
                 ctx.drawImage(e["sprite"].value,
                     0, 0,
                     16, 16,

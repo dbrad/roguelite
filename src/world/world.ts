@@ -37,7 +37,7 @@ class World {
             // draw the entities, also move this to a world class?
             this.currentLevel.drawEntities(ctx);
 
-
+            // render GUI?
 
             this.currentLevel.redraw = false;
         }

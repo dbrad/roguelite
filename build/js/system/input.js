@@ -18,6 +18,7 @@ var Input;
             KEY[KEY["NUM_3"] = 51] = "NUM_3";
             KEY[KEY["NUM_4"] = 52] = "NUM_4";
             KEY[KEY["NUM_5"] = 53] = "NUM_5";
+            KEY[KEY["C"] = 67] = "C";
         })(KB.KEY || (KB.KEY = {}));
         var KEY = KB.KEY;
         var _isDown = [];
@@ -36,6 +37,12 @@ var Input;
             return (result);
         }
         KB.wasDown = wasDown;
+        function clearInputQueue() {
+            for (var key in _wasDown) {
+                _wasDown[key] = false;
+            }
+        }
+        KB.clearInputQueue = clearInputQueue;
         function keyDown(event) {
             var keyCode = event.which;
             _isDown[keyCode] = true;

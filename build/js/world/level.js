@@ -3,8 +3,7 @@ var Level = (function () {
         this.redraw = true;
         this.render_m = true;
         this.render_mm = true;
-        this.camThresh = 12;
-        this.timer = 0;
+        this.cameraMode = false;
         this.cells = [];
         this.visableCells = [];
         this._width = width;
@@ -182,22 +181,53 @@ var Level = (function () {
         }
     };
     Level.prototype.update = function (delta) {
-        this.timer += delta;
-        if (this.timer < 75)
-            return;
-        var step = 1;
         var player = this.EntityList.find(function (e, i, arr) { return (e["player"]); });
-        var playerPos = player["pos"].value;
-        var enemies = this.EntityList.filter(function (e, i, arr) { return (e["enemy"] && e["alive"] && e["alive"].value === true); });
-        if (ECS.Systems.InputControl(player, this)) {
-            for (var _i = 0, enemies_1 = enemies; _i < enemies_1.length; _i++) {
-                var e = enemies_1[_i];
-                ECS.Systems.AIControl(e, this, player);
+        if (Input.KB.wasDown(Input.KB.KEY.C)) {
+            this.cameraMode = !this.cameraMode;
+            this.camera.xOffset = player["pos"].value.x - (this.camera.width / 2);
+            this.camera.yOffset = player["pos"].value.y - (this.camera.height / 2);
+            this.snapCameraToLevel();
+            Input.KB.clearInputQueue();
+            if (this.cameraMode) {
+                TextLog.AddLog("Free Camera Mode (Gameplay Paused)");
+            }
+            else {
+                TextLog.AddLog("Locked Camera Mode (Gameplay Resumed)");
+            }
+        }
+        if (this.cameraMode) {
+            ECS.Systems.FreeCameraControl(this.camera);
+            this.snapCameraToLevel();
+            this.redraw = true;
+        }
+        else {
+            for (var _i = 0, _a = this.EntityList; _i < _a.length; _i++) {
+                var e = _a[_i];
+                if (e["timer"]
+                    && (ECS.isAliveEnemy(e) && e["timer"].value < 1000)
+                    || ((e["player"] && e["timer"].value < 500))) {
+                    e["timer"].value += delta;
+                    continue;
+                }
+                if (e["player"]) {
+                    ECS.Systems.InputControl(e, this);
+                }
+                else if (ECS.isAliveEnemy(e)) {
+                    ECS.Systems.AIControl(e, this, player);
+                }
+                if (e["movement"].value.x !== 0 || e["movement"].value.y !== 0) {
+                    ECS.Systems.Collision(e, this);
+                    if (e["player"]) {
+                        ECS.Systems.LockedCameraControl(this.camera, e);
+                        this.snapCameraToLevel();
+                    }
+                    ECS.Systems.Movement(e, this);
+                    this.redraw = true;
+                }
                 ECS.Systems.StubCombat(e, this, player);
             }
-            ECS.Systems.Vision(player, this);
-            this.redraw = true;
-            this.timer = 0;
+            if (this.redraw)
+                ECS.Systems.Vision(player, this);
         }
     };
     Level.prototype.getTempColor = function (tileID) {
@@ -309,7 +339,7 @@ var Level = (function () {
                 ctx.fillStyle = "#FF0000";
             }
             var t = e.components["pos"].value;
-            if (e["player"] || (e["enemy"] && e["alive"] && e["alive"].value === true && this.cells[t.x][t.y].visable)) {
+            if (e["player"] || (ECS.isAliveEnemy(e) && this.cells[t.x][t.y].visable)) {
                 ctx.drawImage(e["sprite"].value, 0, 0, 16, 16, (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE), (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE), 16, 16);
                 ctx.fillRect(t.x + (GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width), t.y, 1, 1);
             }

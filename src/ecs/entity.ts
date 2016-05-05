@@ -1,5 +1,3 @@
-/// <reference path="./components.ts"/>
-
 interface ComponentDictionary {
     [index: string]: ECS.Components.Component<any>;
 }

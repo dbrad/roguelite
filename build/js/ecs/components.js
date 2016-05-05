@@ -41,6 +41,15 @@ var ECS;
             return Name;
         }(Component));
         Components.Name = Name;
+        var TurnTimer = (function (_super) {
+            __extends(TurnTimer, _super);
+            function TurnTimer() {
+                _super.call(this, "timer");
+                this.value = 0;
+            }
+            return TurnTimer;
+        }(Component));
+        Components.TurnTimer = TurnTimer;
         var Sprite = (function (_super) {
             __extends(Sprite, _super);
             function Sprite(image) {
@@ -59,6 +68,15 @@ var ECS;
             return TilePos;
         }(Component));
         Components.TilePos = TilePos;
+        var Movement = (function (_super) {
+            __extends(Movement, _super);
+            function Movement() {
+                _super.call(this, "movement");
+                this.value = new Point(0, 0);
+            }
+            return Movement;
+        }(Component));
+        Components.Movement = Movement;
         var TorchStr = (function (_super) {
             __extends(TorchStr, _super);
             function TorchStr() {

@@ -15,7 +15,8 @@ namespace Input {
             NUM_2 = 50,
             NUM_3 = 51,
             NUM_4 = 52,
-            NUM_5 = 53
+            NUM_5 = 53,
+            C = 67
         }
 
         let _isDown: boolean[] = [];
@@ -34,6 +35,12 @@ namespace Input {
             let result: boolean = _wasDown[keyCode];
             _wasDown[keyCode] = false;
             return (result);
+        }
+
+        export function clearInputQueue(): void {
+            for (let key in _wasDown) {
+                _wasDown[key] = false;
+            }
         }
 
         export function keyDown(event: KeyboardEvent): void {

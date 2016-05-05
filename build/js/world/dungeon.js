@@ -24,6 +24,8 @@ var Dungeon = (function (_super) {
         player.addComponent(new ECS.Components.TilePos());
         player.addComponent(new ECS.Components.TorchStr());
         player.addComponent(new ECS.Components.Alive());
+        player.addComponent(new ECS.Components.Movement());
+        player.addComponent(new ECS.Components.TurnTimer());
         player.addComponent(new ECS.Components.Audio("move", "player_move.wav"));
         player["pos"].value.x = this.entrance.x;
         player["pos"].value.y = this.entrance.y;
@@ -40,6 +42,8 @@ var Dungeon = (function (_super) {
                 enemy.addComponent(new ECS.Components.Sprite(SpriteSheetCache.spriteSheet("entities").sprites[2]));
             }
             enemy.addComponent(new ECS.Components.TilePos());
+            enemy.addComponent(new ECS.Components.Movement());
+            enemy.addComponent(new ECS.Components.TurnTimer());
             enemy.addComponent(new ECS.Components.Alive());
             enemy.addComponent(new ECS.Components.Audio("death", "rat.wav"));
             do {

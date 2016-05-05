@@ -1,5 +1,3 @@
-/// <reference path="../types/types.ts"/>
-
 class SpriteSheet {
     private image: any;
     sprites: HTMLCanvasElement[] = [];

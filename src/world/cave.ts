@@ -1,12 +1,3 @@
-/// <reference path="../system/game_config.ts"/>
-/// <reference path="../system/camera.ts"/>
-
-/// <reference path="./level.ts"/>
-/// <reference path="./cell.ts"/>
-
-/// <reference path="../util/utility.ts"/>
-/// <reference path="../types/types.ts"/>
-
 class Cave extends Level {
 
     constructor(width: number, height: number, camera: Camera) {

@@ -33,6 +33,7 @@ var Input;
             KEY[KEY["NUM_3"] = 51] = "NUM_3";
             KEY[KEY["NUM_4"] = 52] = "NUM_4";
             KEY[KEY["NUM_5"] = 53] = "NUM_5";
+            KEY[KEY["C"] = 67] = "C";
         })(KB.KEY || (KB.KEY = {}));
         var KEY = KB.KEY;
         var _isDown = [];
@@ -51,6 +52,12 @@ var Input;
             return (result);
         }
         KB.wasDown = wasDown;
+        function clearInputQueue() {
+            for (var key in _wasDown) {
+                _wasDown[key] = false;
+            }
+        }
+        KB.clearInputQueue = clearInputQueue;
         function keyDown(event) {
             var keyCode = event.which;
             _isDown[keyCode] = true;
@@ -314,6 +321,15 @@ var ECS;
             return Name;
         }(Component));
         Components.Name = Name;
+        var TurnTimer = (function (_super) {
+            __extends(TurnTimer, _super);
+            function TurnTimer() {
+                _super.call(this, "timer");
+                this.value = 0;
+            }
+            return TurnTimer;
+        }(Component));
+        Components.TurnTimer = TurnTimer;
         var Sprite = (function (_super) {
             __extends(Sprite, _super);
             function Sprite(image) {
@@ -332,6 +348,15 @@ var ECS;
             return TilePos;
         }(Component));
         Components.TilePos = TilePos;
+        var Movement = (function (_super) {
+            __extends(Movement, _super);
+            function Movement() {
+                _super.call(this, "movement");
+                this.value = new Point(0, 0);
+            }
+            return Movement;
+        }(Component));
+        Components.Movement = Movement;
         var TorchStr = (function (_super) {
             __extends(TorchStr, _super);
             function TorchStr() {
@@ -390,59 +415,41 @@ var ECS;
             var entityPosition = e["pos"].value;
             var movementTaken = false;
             if (Input.KB.wasDown(Input.KB.KEY.LEFT)) {
-                if (level.cells[entityPosition.x - 1][entityPosition.y].tileID !== 4) {
-                    entityPosition.x--;
-                    if (entityPosition.x < level.camera.xOffset + camThresh) {
-                        level.camera.xOffset--;
-                        if (level.camera.xOffset <= 0) {
-                            level.camera.xOffset = 0;
-                        }
-                    }
-                }
+                e["movement"].value.x = -1;
                 movementTaken = true;
             }
             else if (Input.KB.wasDown(Input.KB.KEY.RIGHT)) {
-                if (level.cells[entityPosition.x + 1][entityPosition.y].tileID !== 4) {
-                    entityPosition.x++;
-                    if (entityPosition.x >= level.camera.xOffset + level.camera.width - camThresh) {
-                        level.camera.xOffset++;
-                        if (level.camera.xOffset + level.camera.width >= level.width) {
-                            level.camera.xOffset = (level.width - level.camera.width);
-                        }
-                    }
-                }
+                e["movement"].value.x = 1;
                 movementTaken = true;
             }
             else if (Input.KB.wasDown(Input.KB.KEY.UP)) {
-                if (level.cells[entityPosition.x][entityPosition.y - 1].tileID !== 4) {
-                    entityPosition.y--;
-                    if (entityPosition.y < level.camera.yOffset + (camThresh - 3)) {
-                        level.camera.yOffset--;
-                        if (level.camera.yOffset <= 0) {
-                            level.camera.yOffset = 0;
-                        }
-                    }
-                }
+                e["movement"].value.y = -1;
                 movementTaken = true;
             }
             else if (Input.KB.wasDown(Input.KB.KEY.DOWN)) {
-                if (level.cells[entityPosition.x][entityPosition.y + 1].tileID !== 4) {
-                    entityPosition.y++;
-                    if (entityPosition.y >= level.camera.yOffset + level.camera.height - (camThresh - 3)) {
-                        level.camera.yOffset++;
-                        if (level.camera.yOffset + level.camera.height >= level.height) {
-                            level.camera.yOffset = (level.height - level.camera.height);
-                        }
-                    }
-                }
+                e["movement"].value.y = 1;
                 movementTaken = true;
             }
             if (movementTaken && e["audio-move"]) {
+                Input.KB.clearInputQueue();
                 e["audio-move"].value.play();
             }
             return movementTaken;
         }
         Systems.InputControl = InputControl;
+        function Collision(e, level) {
+            if (level.cells[e["pos"].value.x + e["movement"].value.x][e["pos"].value.y + e["movement"].value.y].tileID === 4) {
+                e["movement"].value.y = e["movement"].value.x = 0;
+            }
+        }
+        Systems.Collision = Collision;
+        function Movement(e, level) {
+            e["pos"].value.y += e["movement"].value.y;
+            e["pos"].value.x += e["movement"].value.x;
+            e["movement"].value.y = e["movement"].value.x = 0;
+            e["timer"].value = 0;
+        }
+        Systems.Movement = Movement;
         function Vision(player, level) {
             for (var _i = 0, _a = level.visableCells; _i < _a.length; _i++) {
                 var c = _a[_i];
@@ -504,6 +511,34 @@ var ECS;
             }
         }
         Systems.Vision = Vision;
+        function LockedCameraControl(camera, e) {
+            var ex = e["pos"].value.x + e["movement"].value.x;
+            var ey = e["pos"].value.y + e["movement"].value.y;
+            if (ex < camera.xOffset + camThresh
+                || ex >= camera.xOffset + camera.width - camThresh) {
+                camera.xOffset += e["movement"].value.x;
+            }
+            if (ey < camera.yOffset + (camThresh / 2)
+                || ey >= camera.yOffset + camera.height - (camThresh / 2)) {
+                camera.yOffset += e["movement"].value.y;
+            }
+        }
+        Systems.LockedCameraControl = LockedCameraControl;
+        function FreeCameraControl(camera) {
+            if (Input.KB.isDown(Input.KB.KEY.LEFT)) {
+                camera.xOffset += -1;
+            }
+            else if (Input.KB.isDown(Input.KB.KEY.RIGHT)) {
+                camera.xOffset += 1;
+            }
+            else if (Input.KB.isDown(Input.KB.KEY.UP)) {
+                camera.yOffset += -1;
+            }
+            else if (Input.KB.isDown(Input.KB.KEY.DOWN)) {
+                camera.yOffset += 1;
+            }
+        }
+        Systems.FreeCameraControl = FreeCameraControl;
         function AIControl(e, level, player) {
             var dx = 0, dy = 0, mx = 0, my = 0;
             dx = e["pos"].value.x - player["pos"].value.x;
@@ -539,14 +574,16 @@ var ECS;
                 }
             }
             if (level.walkable(level.cells[e["pos"].value.x + mx][e["pos"].value.y + my])) {
-                e["pos"].value.x += mx;
-                e["pos"].value.y += my;
+                e["movement"].value.x += mx;
+                e["movement"].value.y += my;
             }
         }
         Systems.AIControl = AIControl;
         function StubCombat(e, level, player) {
             if (e["pos"].value.x === player["pos"].value.x
-                && e["pos"].value.y === player["pos"].value.y) {
+                && e["pos"].value.y === player["pos"].value.y
+                && !e["player"]
+                && e["alive"].value === true) {
                 e["alive"].value = false;
                 if (e["audio-death"]) {
                     e["audio-death"].value.play();
@@ -556,6 +593,14 @@ var ECS;
         }
         Systems.StubCombat = StubCombat;
     })(Systems = ECS.Systems || (ECS.Systems = {}));
+})(ECS || (ECS = {}));
+
+var ECS;
+(function (ECS) {
+    function isAliveEnemy(e) {
+        return (e["enemy"] && e["alive"] && e["alive"].value === true);
+    }
+    ECS.isAliveEnemy = isAliveEnemy;
 })(ECS || (ECS = {}));
 
 var __extends = (this && this.__extends) || function (d, b) {
@@ -658,8 +703,7 @@ var Level = (function () {
         this.redraw = true;
         this.render_m = true;
         this.render_mm = true;
-        this.camThresh = 12;
-        this.timer = 0;
+        this.cameraMode = false;
         this.cells = [];
         this.visableCells = [];
         this._width = width;
@@ -837,22 +881,53 @@ var Level = (function () {
         }
     };
     Level.prototype.update = function (delta) {
-        this.timer += delta;
-        if (this.timer < 75)
-            return;
-        var step = 1;
         var player = this.EntityList.find(function (e, i, arr) { return (e["player"]); });
-        var playerPos = player["pos"].value;
-        var enemies = this.EntityList.filter(function (e, i, arr) { return (e["enemy"] && e["alive"] && e["alive"].value === true); });
-        if (ECS.Systems.InputControl(player, this)) {
-            for (var _i = 0, enemies_1 = enemies; _i < enemies_1.length; _i++) {
-                var e = enemies_1[_i];
-                ECS.Systems.AIControl(e, this, player);
+        if (Input.KB.wasDown(Input.KB.KEY.C)) {
+            this.cameraMode = !this.cameraMode;
+            this.camera.xOffset = player["pos"].value.x - (this.camera.width / 2);
+            this.camera.yOffset = player["pos"].value.y - (this.camera.height / 2);
+            this.snapCameraToLevel();
+            Input.KB.clearInputQueue();
+            if (this.cameraMode) {
+                TextLog.AddLog("Free Camera Mode (Gameplay Paused)");
+            }
+            else {
+                TextLog.AddLog("Locked Camera Mode (Gameplay Resumed)");
+            }
+        }
+        if (this.cameraMode) {
+            ECS.Systems.FreeCameraControl(this.camera);
+            this.snapCameraToLevel();
+            this.redraw = true;
+        }
+        else {
+            for (var _i = 0, _a = this.EntityList; _i < _a.length; _i++) {
+                var e = _a[_i];
+                if (e["timer"]
+                    && (ECS.isAliveEnemy(e) && e["timer"].value < 1000)
+                    || ((e["player"] && e["timer"].value < 500))) {
+                    e["timer"].value += delta;
+                    continue;
+                }
+                if (e["player"]) {
+                    ECS.Systems.InputControl(e, this);
+                }
+                else if (ECS.isAliveEnemy(e)) {
+                    ECS.Systems.AIControl(e, this, player);
+                }
+                if (e["movement"].value.x !== 0 || e["movement"].value.y !== 0) {
+                    ECS.Systems.Collision(e, this);
+                    if (e["player"]) {
+                        ECS.Systems.LockedCameraControl(this.camera, e);
+                        this.snapCameraToLevel();
+                    }
+                    ECS.Systems.Movement(e, this);
+                    this.redraw = true;
+                }
                 ECS.Systems.StubCombat(e, this, player);
             }
-            ECS.Systems.Vision(player, this);
-            this.redraw = true;
-            this.timer = 0;
+            if (this.redraw)
+                ECS.Systems.Vision(player, this);
         }
     };
     Level.prototype.getTempColor = function (tileID) {
@@ -964,7 +1039,7 @@ var Level = (function () {
                 ctx.fillStyle = "#FF0000";
             }
             var t = e.components["pos"].value;
-            if (e["player"] || (e["enemy"] && e["alive"] && e["alive"].value === true && this.cells[t.x][t.y].visable)) {
+            if (e["player"] || (ECS.isAliveEnemy(e) && this.cells[t.x][t.y].visable)) {
                 ctx.drawImage(e["sprite"].value, 0, 0, 16, 16, (t.x * GAMEINFO.TILESIZE) - (this.camera.xOffset * GAMEINFO.TILESIZE), (t.y * GAMEINFO.TILESIZE) - (this.camera.yOffset * GAMEINFO.TILESIZE), 16, 16);
                 ctx.fillRect(t.x + (GAMEINFO.GAME_PIXEL_WIDTH - this.MiniMap.width), t.y, 1, 1);
             }
@@ -1150,6 +1225,8 @@ var Dungeon = (function (_super) {
         player.addComponent(new ECS.Components.TilePos());
         player.addComponent(new ECS.Components.TorchStr());
         player.addComponent(new ECS.Components.Alive());
+        player.addComponent(new ECS.Components.Movement());
+        player.addComponent(new ECS.Components.TurnTimer());
         player.addComponent(new ECS.Components.Audio("move", "player_move.wav"));
         player["pos"].value.x = this.entrance.x;
         player["pos"].value.y = this.entrance.y;
@@ -1166,6 +1243,8 @@ var Dungeon = (function (_super) {
                 enemy.addComponent(new ECS.Components.Sprite(SpriteSheetCache.spriteSheet("entities").sprites[2]));
             }
             enemy.addComponent(new ECS.Components.TilePos());
+            enemy.addComponent(new ECS.Components.Movement());
+            enemy.addComponent(new ECS.Components.TurnTimer());
             enemy.addComponent(new ECS.Components.Alive());
             enemy.addComponent(new ECS.Components.Audio("death", "rat.wav"));
             do {

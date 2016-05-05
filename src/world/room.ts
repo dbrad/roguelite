@@ -1,5 +1,3 @@
-/// <reference path="../util/utility.ts"/>
-
 enum WALL { N, E, S, W };
 class Room {
     x: number;

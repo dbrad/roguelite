@@ -1,16 +1,3 @@
-/// <reference path="./input.ts"/>
-/// <reference path="./camera.ts"/>
-/// <reference path="./game_config.ts"/>
-
-/// <reference path="../types/types.ts"/>
-/// <reference path="../util/utility.ts"/>
-
-/// <reference path="../ecs/components.ts"/>
-/// <reference path="../ecs/entity.ts"/>
-
-/// <reference path="../world/level.ts"/>
-/// <reference path="../world/dungeon.ts"/>
-
 class Game {
     private _loopHandle: number;
 

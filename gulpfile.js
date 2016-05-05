@@ -24,6 +24,7 @@ gulp.task('concat', function() {
 		"build/js/ecs/components.js",
 		"build/js/ecs/entity.js",
 		"build/js/ecs/systems.js",
+		"build/js/ecs/functions.js",
 
 		"build/js/world/game_objs.js",
 		"build/js/world/player.js",
